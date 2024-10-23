@@ -159,7 +159,16 @@ export const Main = () => {
 
     useEffect(() => {
         if (dataStore?.dataStore?.entries) {
-            const entry = dataStore.dataStore.entries.find(e => e.key === selectedProgram);
+            let entry = dataStore.dataStore.entries.find(e => e.key === 'activeProgram');
+            if (entry) {
+                setSelectedProgram(entry.value);
+                setSelectedSharedProgram(entry.value);
+            }
+            entry = dataStore.dataStore.entries.find(e => e.key === 'activeStage');
+            if (entry) {
+                setSelectedStage(entry.value);
+            }
+            entry = dataStore.dataStore.entries.find(e => e.key === selectedProgram)
             if (entry) {
                 setNameAttributes(entry.value.nameAttributes || []);
                 setFilterAttributes(entry.value.filterAttributes || []);
@@ -292,6 +301,16 @@ export const Main = () => {
     const handleProgramChange = (event) => {
         setSelectedProgram(event);
         setSelectedSharedProgram(event);
+
+        const mutation = {
+            resource: `dataStore/${config.dataStoreName}/activeProgram`,
+            type: 'create',
+            data: event
+        }
+        engine.mutate(mutation).catch(e => {
+            mutation.type = 'update';
+            engine.mutate(mutation);
+        })
     }
 
     const stateDateChanged = event => {
@@ -446,13 +465,11 @@ export const Main = () => {
             })
         }
         //Loop through each edit records and recreate event data for
-        console.log('Edits')
         _edits.forEach(edit => {
             Map.groupBy(edit.values, ({date}) => formatDate(date)).keys().forEach(eventDate => {
                 let event = edit.entity?.enrollments[0].events?.find(event => event.programStage === selectedStage &&
                     formatDate(event.occurredAt) === eventDate);
                 const values = filterValues(edit.values, eventDate);
-                console.log('Edit', edit, event)
                 if (!event) {
                     const existingEvent = edit.entity.enrollments[0].events?.find(event => event.programStage === selectedStage);
                     if (existingEvent && !repeatable) {
@@ -727,6 +744,15 @@ export const Main = () => {
                                                     setSelectedStage={(stage) => {
                                                         setSelectedStage(stage)
                                                         setSelectedSharedStage(stage)
+                                                        const mutation = {
+                                                            resource: `dataStore/${config.dataStoreName}/activeStage`,
+                                                            type: 'create',
+                                                            data: stage
+                                                        }
+                                                        engine.mutate(mutation).catch(e => {
+                                                            mutation.type = 'update';
+                                                            engine.mutate(mutation);
+                                                        })
                                                     }
                                                     }
                                                 />
@@ -762,7 +788,7 @@ export const Main = () => {
                                                 <div className="w-3/12 flex flex-col">
                                                     <label
                                                         className="text-left block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-                                                        {((endDateVisible && repeatable) || groupEdit) ? 'Event Start Date' : 'Event Date'}
+                                                        {((endDateVisible && repeatable)) ? 'Event Start Date' : 'Event Date'}
                                                     </label>
                                                     <CalendarInput
                                                         label=""
@@ -771,7 +797,7 @@ export const Main = () => {
                                                         onDateSelect={stateDateChanged}
                                                     />
                                                 </div>
-                                                {((endDateVisible && repeatable) || groupEdit) &&
+                                                {((endDateVisible && repeatable)) &&
                                                     <div className="w-3/12 flex flex-col">
                                                         <label
                                                             className="text-left block mb-2 text-sm font-medium text-gray-900 dark:text-white">
@@ -814,11 +840,12 @@ export const Main = () => {
                                                                 {dataElements.length > 0 && (configuredStages[selectedStage]['groupDataElements'] || []).map((cde, idx) => {
                                                                     const de = dataElements.find(de => de.id === cde);
                                                                     return <>
-                                                                        <DataElementComponent key={idx}
-                                                                                              value={groupDataElementValue(cde)}
-                                                                                              dataElement={de}
-                                                                                              labelVisible={true}
-                                                                                              valueChanged={createOrUpdateGroupEvent}/>
+                                                                        {de && <DataElementComponent key={idx}
+                                                                                                     value={groupDataElementValue(cde)}
+                                                                                                     dataElement={de}
+                                                                                                     labelVisible={true}
+                                                                                                     valueChanged={createOrUpdateGroupEvent}/>
+                                                                        }
                                                                     </>
                                                                 })}
                                                             </div>
@@ -1046,7 +1073,7 @@ export const Main = () => {
                                                                             }
                                                                             <td>{index + 1}</td>
                                                                             <td className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{getParticipant(entity)}</td>
-                                                                            {!groupEdit && dates.map((date, idx) => {
+                                                                            {!groupEdit && configuredStages[selectedStage] && dates.map((date, idx) => {
                                                                                 if (!columnDisplay) {
                                                                                     return <>
                                                                                         <td key={idx}
@@ -1073,12 +1100,14 @@ export const Main = () => {
                                                                                                         {(dataElements.length > 0 && configuredStages[selectedStage]['dataElements'] || []).map((cde, idx) => {
                                                                                                             const de = dataElements.find(de => de.id === cde);
                                                                                                             return <>
-                                                                                                                <DataElementComponent
-                                                                                                                    key={idx}
-                                                                                                                    value={dataElementValue(date, de.id, entity)}
-                                                                                                                    dataElement={de}
-                                                                                                                    labelVisible={true}
-                                                                                                                    valueChanged={(d, v) => createOrUpdateEvent(entity, date, de, v)}/>
+                                                                                                                {de &&
+                                                                                                                    <DataElementComponent
+                                                                                                                        key={idx}
+                                                                                                                        value={dataElementValue(date, de.id, entity)}
+                                                                                                                        dataElement={de}
+                                                                                                                        labelVisible={true}
+                                                                                                                        valueChanged={(d, v) => createOrUpdateEvent(entity, date, de, v)}/>
+                                                                                                                }
                                                                                                             </>
                                                                                                         })}
                                                                                                     </div>
@@ -1087,18 +1116,20 @@ export const Main = () => {
                                                                                         </td>
                                                                                     </>
                                                                                 } else {
+                                                                                    console.log('configuredStages[selectedStage][\'dataElements\']', configuredStages[selectedStage]['dataElements'])
                                                                                     return <>
                                                                                         {(configuredStages[selectedStage]['dataElements'] || []).map((id, idx2) => {
                                                                                             const de = dataElements.find(de => de.id === id);
-
                                                                                             return <>
                                                                                                 <td>
-                                                                                                    <DataElementComponent
-                                                                                                        key={idx2}
-                                                                                                        value={dataElementValue(date, de.id, entity)}
-                                                                                                        dataElement={de}
-                                                                                                        labelVisible={true}
-                                                                                                        valueChanged={(d, v) => createOrUpdateEvent(entity, date, de, v)}/>
+                                                                                                    {de &&
+                                                                                                        <DataElementComponent
+                                                                                                            key={idx2}
+                                                                                                            value={dataElementValue(date, de.id, entity)}
+                                                                                                            dataElement={de}
+                                                                                                            labelVisible={true}
+                                                                                                            valueChanged={(d, v) => createOrUpdateEvent(entity, date, de, v)}/>
+                                                                                                    }
                                                                                                 </td>
                                                                                             </>
                                                                                         })}
@@ -1132,12 +1163,14 @@ export const Main = () => {
                                                                                                         {dataElements.length > 0 && individualDataElementsForDates().map((cde, idx) => {
                                                                                                             const de = dataElements.find(de => de.id === cde);
                                                                                                             return <>
-                                                                                                                <DataElementComponent
-                                                                                                                    key={idx}
-                                                                                                                    value={dataElementValue(startDate, de.id, entity)}
-                                                                                                                    dataElement={de}
-                                                                                                                    labelVisible={true}
-                                                                                                                    valueChanged={(d, v) => createOrUpdateIndividualEvent(entity, de, v)}/>
+                                                                                                                {de &&
+                                                                                                                    <DataElementComponent
+                                                                                                                        key={idx}
+                                                                                                                        value={dataElementValue(startDate, de.id, entity)}
+                                                                                                                        dataElement={de}
+                                                                                                                        labelVisible={true}
+                                                                                                                        valueChanged={(d, v) => createOrUpdateIndividualEvent(entity, de, v)}/>
+                                                                                                                }
                                                                                                             </>
                                                                                                         })}
                                                                                                     </div>
@@ -1151,17 +1184,19 @@ export const Main = () => {
                                                                                             const de = dataElements.find(de => de.id === cde);
                                                                                             return <>
                                                                                                 <td>
-                                                                                                    <div
-                                                                                                        className="flex flex-col my-auto">
-                                                                                                        <DataElementComponent
-                                                                                                            key={idx2}
-                                                                                                            value={dataElementValue(startDate, de.id, entity)}
-                                                                                                            dataElement={de}
-                                                                                                            labelVisible={false}
-                                                                                                            valueChanged={(d, v) => {
-                                                                                                                createOrUpdateIndividualEvent(entity, de, v)
-                                                                                                            }}/>
-                                                                                                    </div>
+                                                                                                    {de &&
+                                                                                                        <div
+                                                                                                            className="flex flex-col my-auto">
+                                                                                                            <DataElementComponent
+                                                                                                                key={idx2}
+                                                                                                                value={dataElementValue(startDate, de.id, entity)}
+                                                                                                                dataElement={de}
+                                                                                                                labelVisible={false}
+                                                                                                                valueChanged={(d, v) => {
+                                                                                                                    createOrUpdateIndividualEvent(entity, de, v)
+                                                                                                                }}/>
+                                                                                                        </div>
+                                                                                                    }
                                                                                                 </td>
                                                                                             </>
                                                                                         })}

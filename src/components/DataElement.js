@@ -67,7 +67,7 @@ export const DataElementComponent = ({dataElement, labelVisible, label, value, v
                                 </div>
                             </>
                         }
-                        if ((de.valueType.includes('INTEGER') || de.valueType === 'NUMBER')) {
+                        if ((de.valueType?.includes('INTEGER') || de.valueType === 'NUMBER')) {
                             return <>
                                 <div
                                     className="mb-5">
@@ -84,7 +84,7 @@ export const DataElementComponent = ({dataElement, labelVisible, label, value, v
                                 </div>
                             </>
                         }
-                        if (de.valueType.includes('TEXT')) {
+                        if (de.valueType?.includes('TEXT')) {
                             return <>
                                 <div
                                     className="mb-5">
@@ -101,7 +101,7 @@ export const DataElementComponent = ({dataElement, labelVisible, label, value, v
                                 </div>
                             </>
                         }
-                        if (de.valueType.includes('DATE')) {
+                        if (de.valueType?.includes('DATE')) {
                             return <>
                                 <div
                                     className="mb-5 flex flex-col">
