@@ -155,6 +155,8 @@ const ConfigurationComponent = () => {
                 const exists = keyExists;
                 exists[selectedProgram] = true;
                 setKeyExists(exists);
+
+                console.log('entry.value.configuredStages', entry.value.configuredStages)
             }
         }
     }, [dataStore, selectedProgram]);
@@ -311,23 +313,6 @@ const ConfigurationComponent = () => {
                                     className="flex items-center">
                                     <input
                                         type="checkbox"
-                                        checked={endDateVisible === true}
-                                        onChange={(payload) => {
-                                            setEndDateVisible(payload.target.checked);
-                                            dataStoreOperation('endDateVisible', payload.target.checked);
-                                        }}
-                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
-                                    <label
-                                        className="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                                        {i18n.t('End Date Visible?')}
-                                    </label>
-                                </div>
-                            </div>
-                            <div className="shadow-sm rounded-md p-3 bg-white mb-2">
-                                <div
-                                    className="flex items-center">
-                                    <input
-                                        type="checkbox"
                                         checked={groupEdit === true}
                                         onChange={(payload) => {
                                             setGroupEdit(payload.target.checked);
@@ -376,47 +361,34 @@ const ConfigurationComponent = () => {
                                                             {stages.find(s => s.id === stage)?.displayName}
                                                         </div>
                                                         <div className="w-5/12 flex-row flex">
-                                                            {true &&
-                                                                <>
-                                                                    <button type="button"
-                                                                            className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-                                                                            onClick={() => {
-                                                                                setEditing(true);
-                                                                                setConfigure1(false);
-                                                                                if (groupEdit) {
-                                                                                    setSelectedGroupDataElements(configuredStages[stage]['groupDataElements'] || []);
-                                                                                } else {
-                                                                                    setSelectedDataElements(configuredStages[stage]['dataElements'] || []);
-                                                                                }
-                                                                                setSelectedStage(stage)
-                                                                            }}>Edit Stage
-                                                                    </button>
-                                                                    <button type="button"
-                                                                            className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-                                                                            onClick={() => {
-                                                                                setConfigure1(true);
-                                                                                setEditing(false);
-                                                                                if (groupEdit) {
-                                                                                    setSelectedGroupDataElements(configuredStages[stage]['groupDataElements'] || []);
-                                                                                } else {
-                                                                                    setSelectedDataElements(configuredStages[stage]['dataElements'] || []);
-                                                                                }
-                                                                                setSelectedStage(stage)
-                                                                            }}>Sort Order
-                                                                    </button>
-                                                                    <button type="button"
-                                                                            className="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900"
-                                                                            onClick={() => {
-                                                                                const stages = configuredStages
-                                                                                delete stages[selectedStage]
-                                                                                setConfiguredStages(stages);
-                                                                                setEditing(false);
-                                                                                setSelectedStage('');
-
-                                                                                dataStoreOperation('configuredStages', stages);
-                                                                            }}>Delete Stage Config
-                                                                    </button>
-                                                                </>
+                                                            {<>
+                                                                <button type="button"
+                                                                        className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+                                                                        onClick={() => {
+                                                                            setEditing(true);
+                                                                            setConfigure1(false);
+                                                                            if (groupEdit) {
+                                                                                setSelectedGroupDataElements(configuredStages[stage]['groupDataElements'] || []);
+                                                                            } else {
+                                                                                setSelectedDataElements(configuredStages[stage]['dataElements'] || []);
+                                                                            }
+                                                                            setSelectedStage(stage)
+                                                                        }}>Edit Stage
+                                                                </button>
+                                                                <button type="button"
+                                                                        className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+                                                                        onClick={() => {
+                                                                            setConfigure1(true);
+                                                                            setEditing(false);
+                                                                            if (groupEdit) {
+                                                                                setSelectedGroupDataElements(configuredStages[stage]['groupDataElements'] || []);
+                                                                            } else {
+                                                                                setSelectedDataElements(configuredStages[stage]['dataElements'] || []);
+                                                                            }
+                                                                            setSelectedStage(stage)
+                                                                        }}>Sort Order
+                                                                </button>
+                                                            </>
                                                             }
                                                         </div>
                                                     </div>
@@ -473,24 +445,32 @@ const ConfigurationComponent = () => {
                                                     <thead
                                                         className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                                     <tr>
-                                                        <th rowSpan={2} className="px-6 py-6">
+                                                        <th rowSpan={2} className="px-6 py-6 w-1/12">
                                                             <div
                                                                 className="flex items-center mb-4">
                                                                 <input
                                                                     type="checkbox"
                                                                     onChange={(event) => {
                                                                         if (event.target.checked) {
-                                                                            setSelectedDataElements(dataElements.map(de => de.id))
+                                                                            if (groupEdit) {
+                                                                                setSelectedGroupDataElements(dataElements.map(de => de.id))
+                                                                            } else {
+                                                                                setSelectedDataElements(dataElements.map(de => de.id))
+                                                                            }
                                                                         } else {
-                                                                            setSelectedDataElements([])
+                                                                            if (groupEdit) {
+                                                                                setSelectedGroupDataElements([])
+                                                                            } else {
+                                                                                setSelectedDataElements([]);
+                                                                            }
                                                                         }
                                                                     }}
-                                                                    checked={selectedDataElements?.length === dataElements.length}
+                                                                    checked={(groupEdit ? selectedGroupDataElements?.length : selectedDataElements?.length) === dataElements.length}
                                                                     className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
                                                             </div>
                                                         </th>
-                                                        <th data-priority="1" className="px-6 py-3">#</th>
-                                                        <th data-priority="2" className="px-6 py-3">
+                                                        <th data-priority="1" className="px-6 py-3 w-1/12">#</th>
+                                                        <th data-priority="2" className="px-6 py-3 w-10/12">
                                                             Data Element
                                                         </th>
                                                     </tr>
@@ -531,7 +511,7 @@ const ConfigurationComponent = () => {
                                                     </tbody>
                                                     <tfoot>
                                                     <tr className="font-semibold text-gray-900 dark:text-white">
-                                                        <th scope="row" className="px-6 py-3 text-base">
+                                                        <th colSpan={3} className="px-6 py-3 text-base">
                                                             {!groupEdit && selectedDataElements?.length > 0 &&
                                                                 <button type="button"
                                                                         className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
@@ -609,11 +589,11 @@ const ConfigurationComponent = () => {
                                                     <thead
                                                         className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                                     <tr>
-                                                        <th data-priority="1" className="px-6 py-3">#</th>
-                                                        <th data-priority="2" className="px-6 py-3">
+                                                        <th data-priority="1" className="px-6 py-3 w-1/12">#</th>
+                                                        <th data-priority="2" className="px-6 py-3 w-9/12">
                                                             Data Element
                                                         </th>
-                                                        <th></th>
+                                                        <th className="w-2/12"></th>
                                                     </tr>
                                                     </thead>
                                                     <tbody>
@@ -647,7 +627,7 @@ const ConfigurationComponent = () => {
                                                     </tbody>
                                                     <tfoot>
                                                     <tr className="font-semibold text-gray-900 dark:text-white">
-                                                        <th scope="row" className="px-6 py-3 text-base">
+                                                        <th colSpan={2} className="px-6 py-3 text-base">
                                                             <button type="button"
                                                                     className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
                                                                     onClick={() => {
@@ -693,44 +673,26 @@ const ConfigurationComponent = () => {
                                                                 {stages.find(s => s.id === stage)?.displayName}
                                                             </div>
                                                             <div className="w-5/12 flex-row flex">
-                                                                {true &&
-                                                                    <>
-                                                                        <button type="button"
-                                                                                className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-                                                                                onClick={() => {
-                                                                                    setEditing1(true);
-                                                                                    setConfigure2(false);
-                                                                                    setSelectedIndividualDataElements(configuredStages[stage]['individualDataElements'] || [])
-                                                                                    setSelectedStage(stage)
-                                                                                }}>Edit Stage
-                                                                        </button>
-                                                                        <button type="button"
-                                                                                className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-                                                                                onClick={() => {
-                                                                                    setConfigure2(true);
-                                                                                    setEditing1(false);
-                                                                                    setSelectedIndividualDataElements(configuredStages[stage]['groupDataElements'] || []);
-                                                                                    setSelectedStage(stage)
-                                                                                }}>Sort Order
-                                                                        </button>
-                                                                        <button type="button"
-                                                                                className="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900"
-                                                                                onClick={() => {
-                                                                                    const stages = configuredStages
-                                                                                    delete stages[selectedStage]['individualDataElements'];
-                                                                                    if (!stages[selectedStage]['individualDataElements'] &&
-                                                                                        !stages[selectedStage]['dataElements'] &&
-                                                                                        !stages[selectedStage]['groupDataElement']) {
-                                                                                        delete stages[selectedStage]
-                                                                                    }
-                                                                                    setConfiguredStages(stages);
-                                                                                    setEditing1(false);
-                                                                                    setSelectedStage('');
-
-                                                                                    dataStoreOperation('configuredStages', stages);
-                                                                                }}>Delete Stage Config
-                                                                        </button>
-                                                                    </>
+                                                                {<>
+                                                                    <button type="button"
+                                                                            className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+                                                                            onClick={() => {
+                                                                                setEditing1(true);
+                                                                                setConfigure2(false);
+                                                                                setSelectedIndividualDataElements(configuredStages[stage]['individualDataElements'] || [])
+                                                                                setSelectedStage(stage)
+                                                                            }}>Edit Stage
+                                                                    </button>
+                                                                    <button type="button"
+                                                                            className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+                                                                            onClick={() => {
+                                                                                setConfigure2(true);
+                                                                                setEditing1(false);
+                                                                                setSelectedIndividualDataElements(configuredStages[stage]['groupDataElements'] || []);
+                                                                                setSelectedStage(stage)
+                                                                            }}>Sort Order
+                                                                    </button>
+                                                                </>
                                                                 }
                                                             </div>
                                                         </div>
@@ -787,7 +749,7 @@ const ConfigurationComponent = () => {
                                                             <thead
                                                                 className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                                             <tr>
-                                                                <th rowSpan={2} className="px-6 py-6">
+                                                                <th className="px-6 py-6 w-1/12">
                                                                     <div
                                                                         className="flex items-center mb-4">
                                                                         <input
@@ -803,8 +765,8 @@ const ConfigurationComponent = () => {
                                                                             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
                                                                     </div>
                                                                 </th>
-                                                                <th data-priority="1" className="px-6 py-3">#</th>
-                                                                <th data-priority="2" className="px-6 py-3">
+                                                                <th data-priority="1" className="px-6 py-3 w-1/12">#</th>
+                                                                <th data-priority="2" className="px-6 py-3 w-10/12">
                                                                     Data Element
                                                                 </th>
                                                             </tr>
@@ -839,7 +801,7 @@ const ConfigurationComponent = () => {
                                                             </tbody>
                                                             <tfoot>
                                                             <tr className="font-semibold text-gray-900 dark:text-white">
-                                                                <th scope="row" className="px-6 py-3 text-base">
+                                                                <th colSpan={3} className="px-6 py-3 text-base">
                                                                     {selectedIndividualDataElements?.length > 0 &&
                                                                         <button type="button"
                                                                                 className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
@@ -896,11 +858,11 @@ const ConfigurationComponent = () => {
                                                         <thead
                                                             className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                                         <tr>
-                                                            <th data-priority="1" className="px-6 py-3">#</th>
-                                                            <th data-priority="2" className="px-6 py-3">
+                                                            <th data-priority="1" className="px-6 py-3 w-1/12">#</th>
+                                                            <th data-priority="2" className="px-6 py-3 w-9/12">
                                                                 Data Element
                                                             </th>
-                                                            <th></th>
+                                                            <th className="w-2/12"></th>
                                                         </tr>
                                                         </thead>
                                                         <tbody>
@@ -934,7 +896,7 @@ const ConfigurationComponent = () => {
                                                         </tbody>
                                                         <tfoot>
                                                         <tr className="font-semibold text-gray-900 dark:text-white">
-                                                            <th scope="row" className="px-6 py-3 text-base">
+                                                            <th colSpan={2} className="px-6 py-3 text-base">
                                                                 <button type="button"
                                                                         className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
                                                                         onClick={() => {
