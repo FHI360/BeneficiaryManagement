@@ -155,8 +155,6 @@ const ConfigurationComponent = () => {
                 const exists = keyExists;
                 exists[selectedProgram] = true;
                 setKeyExists(exists);
-
-                console.log('entry.value.configuredStages', entry.value.configuredStages)
             }
         }
     }, [dataStore, selectedProgram]);
@@ -251,18 +249,7 @@ const ConfigurationComponent = () => {
     return (
         <>
             <div className="flex flex-row w-full h-full">
-                <div
-                    className="w-2/12 bg-[#f8f4f3] p-4 z-50 transition-transform">
-                    <a href="#" className="flex items-center pb-4 border-b border-b-gray-800">
-
-                        <h2 className="font-bold text-2xl">{MainTitle}</h2>
-                    </a>
-                    <OrganisationUnitComponent
-                        handleOUChange={handleOUChange}
-                        selectedOU={selectedOU}
-                    />
-                </div>
-                <div className="w-10/12 ml-4 mr-4 p-4 bg-gray-200 min-h-screen transition-all rounded-md">
+                <div className="page">
                     <Navigation/>
                     <div className="p-6">
                         <div className="flex flex-col w-full">
@@ -354,7 +341,7 @@ const ConfigurationComponent = () => {
                                     </label>
                                     <div className="w-full flex flex-col">
                                         {Object.keys(configuredStages).map((stage) => {
-                                            if (stage) {
+                                            if (stage && (configuredStages[stage]['groupDataElements'] || configuredStages[stage]['dataElements'] || []).length > 0) {
                                                 return <>
                                                     <div className="border-b p-2 bg-gray-100 w-full flex flex-row">
                                                         <div className="w-7/12">
@@ -666,7 +653,7 @@ const ConfigurationComponent = () => {
                                         </label>
                                         <div className="w-full flex flex-col">
                                             {Object.keys(configuredStages).map((stage) => {
-                                                if (stage) {
+                                                if (stage && (configuredStages[stage]['individualDataElements'] || []).length > 0) {
                                                     return <>
                                                         <div className="border-b p-2 bg-gray-100 w-full flex flex-row">
                                                             <div className="w-7/12">
@@ -765,7 +752,8 @@ const ConfigurationComponent = () => {
                                                                             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
                                                                     </div>
                                                                 </th>
-                                                                <th data-priority="1" className="px-6 py-3 w-1/12">#</th>
+                                                                <th data-priority="1" className="px-6 py-3 w-1/12">#
+                                                                </th>
                                                                 <th data-priority="2" className="px-6 py-3 w-10/12">
                                                                     Data Element
                                                                 </th>
@@ -782,13 +770,11 @@ const ConfigurationComponent = () => {
                                                                                     type="checkbox"
                                                                                     checked={selectedIndividualDataElements?.includes(dataElement.id)}
                                                                                     onChange={() => {
-                                                                                        console.log('Individuals 1', selectedIndividualDataElements)
                                                                                         if (selectedIndividualDataElements?.includes(dataElement.id)) {
                                                                                             setSelectedIndividualDataElements(selectedIndividualDataElements?.filter(rowId => rowId !== dataElement.id));
                                                                                         } else {
                                                                                             setSelectedIndividualDataElements([...selectedIndividualDataElements, dataElement.id]);
                                                                                         }
-                                                                                        console.log('Individuals', selectedIndividualDataElements)
                                                                                     }}
                                                                                     className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
                                                                             </div>
