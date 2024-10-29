@@ -1,15 +1,16 @@
 import { useAlert, useDataEngine, useDataQuery } from '@dhis2/app-runtime';
 import i18n from '@dhis2/d2-i18n';
-import { CalendarInput, Modal, ModalActions, ModalContent, ModalTitle } from '@dhis2/ui';
+import { CalendarInput, Modal, ModalActions, ModalContent, ModalTitle, Pagination } from '@dhis2/ui';
 import classnames from 'classnames';
 import React, { useContext, useEffect, useState } from 'react';
-import { config, MainTitle } from '../../consts.js';
+import { config } from '../../consts.js';
 import { provisionOUs, SharedStateContext } from '../../utils.js';
-import { DataElementComponent } from '../DataElement.js';
 import { Navigation } from '../Navigation.js';
 import OrganisationUnitComponent from '../OrganisationUnitComponent.js';
-import ProgramComponent from '../ProgramComponent.js';
-import ProgramStageComponent from '../ProgramStageComponent.js';
+import ProgramComponent from '../ProgramComponent';
+import ProgramStageComponent from '../ProgramStageComponent';
+import { DataElementComponent } from '../DataElement';
+import { SpinnerComponent } from '../SpinnerComponent';
 
 export const Main = () => {
     const engine = useDataEngine();
@@ -41,13 +42,11 @@ export const Main = () => {
     const [entities, setEntities] = useState([]);
     const [allEntities, setAllEntities] = useState([]);
     const [filterValue, setFilterValue] = useState({});
-    const [scrollHeight, setScrollHeight] = useState('350px');
     const [selectedOU, setSelectedOU] = useState(selectedSharedOU);
     const [nameAttributes, setNameAttributes] = useState([]);
     const [filterAttributes, setFilterAttributes] = useState([]);
     const [configuredStages, setConfiguredStages] = useState({});
     const [entityAttributes, setEntityAttributes] = useState([]);
-    const [attributeOptions, setAttributeOptions] = useState({});
     const [endDateVisible, setEndDateVisible] = useState(false);
     const [groupEdit, setGroupEdit] = useState(false);
     const [edits, setEdits] = useState([]);
@@ -60,7 +59,9 @@ export const Main = () => {
     const [modalShow, setModalShow] = useState(false);
     const [confirmShow, setConfirmShow] = useState(false);
     const [templateName, setTemplateName] = useState('');
-    const [attributesFilter, setAttributesFilters] = useState({});
+    const [total, setTotal] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
 
     const {show} = useAlert(
         ({msg}) => msg,
@@ -121,6 +122,7 @@ export const Main = () => {
                     pageSize: pageSize,
                     page: page,
                     paging: true,
+                    totalPages: true,
                     fields: ['*'],
                 })
             }
@@ -133,15 +135,6 @@ export const Main = () => {
             programStage: selectedProgram,
             start: startDate,
             end: endDate,
-        }
-    });
-
-    const {data: entityData, refetch} = useDataQuery(entitiesQuery, {
-        variables: {
-            program: selectedProgram,
-            orgUnit: orgUnit,
-            page,
-            pageSize
         }
     });
 
@@ -159,7 +152,16 @@ export const Main = () => {
 
     useEffect(() => {
         if (dataStore?.dataStore?.entries) {
-            const entry = dataStore.dataStore.entries.find(e => e.key === selectedProgram);
+            let entry = dataStore.dataStore.entries.find(e => e.key === 'activeProgram');
+            if (entry) {
+                setSelectedProgram(entry.value);
+                setSelectedSharedProgram(entry.value);
+            }
+            entry = dataStore.dataStore.entries.find(e => e.key === 'activeStage');
+            if (entry) {
+                setSelectedStage(entry.value);
+            }
+            entry = dataStore.dataStore.entries.find(e => e.key === selectedProgram)
             if (entry) {
                 setNameAttributes(entry.value.nameAttributes || []);
                 setFilterAttributes(entry.value.filterAttributes || []);
@@ -202,51 +204,40 @@ export const Main = () => {
     }, [elementsData, selectedStage]);
 
     useEffect(() => {
-        if (entityData && entityData.entities) {
-            setAllEntities(entityData.entities.instances);
-            if (filterValue && Object.keys(filterValue).length) {
-                Object.keys(filterValue).forEach(key => {
-                    const entities = entityData.entities.instances.filter(entity => {
-                        const attribute = entity.attributes.find(attr => attr.attribute === key);
-                        return attribute && attribute.value + '' === filterValue[key] + '';
-                    });
+        if (orgUnit && selectedProgram) {
+            setLoading(true);
+            engine.query(entitiesQuery, {
+                variables: {
+                    program: selectedProgram,
+                    orgUnit: orgUnit,
+                    page,
+                    pageSize
+                }
+            }).then(res => {
+                if (res && res.entities) {
+                    setAllEntities(res.entities.instances);
+                    setTotal(res.entities.total);
 
-                    setEntities(entities);
-                })
-            } else {
-                setEntities(entityData.entities.instances);
-            }
-        } else {
-            setEntities([])
+                    if (filterValue && Object.keys(filterValue).length) {
+                        Object.keys(filterValue).forEach(key => {
+                            const entities = res.entities.instances.filter(entity => {
+                                const attribute = entity.attributes.find(attr => attr.attribute === key);
+                                return attribute && attribute.value + '' === filterValue[key] + '';
+                            });
+
+                            setEntities(entities);
+                        })
+                    } else {
+                        setEntities(res.entities.instances);
+                    }
+                    setLoading(false);
+                } else {
+                    setEntities([]);
+                    setLoading(false)
+                }
+            });
         }
-    }, [orgUnit, selectedProgram, entityData, page, pageSize]);
-
-    useEffect(() => {
-        setPage(1);
-        refetch({page: 1, pageSize: pageSize, program: selectedProgram, orgUnit: orgUnit});
-    }, [orgUnit, selectedProgram, pageSize, page])
-
-    useEffect(() => {
-        const adjustScrollHeight = () => {
-            const height = window.innerHeight;
-            if (height < 800) {
-                setScrollHeight('350px');
-            } else {
-                setScrollHeight('700px');
-            }
-        };
-
-        // Adjust scrollHeight initially
-        adjustScrollHeight();
-
-        // Add event listener to adjust on resize
-        window.addEventListener('resize', adjustScrollHeight);
-
-        // Clean up event listener on component unmount
-        return () => {
-            window.removeEventListener('resize', adjustScrollHeight);
-        };
-    }, []);
+    }, [orgUnit, selectedProgram, page, pageSize]);
 
     useEffect(() => {
         attributesRefetch({program: selectedProgram})
@@ -292,6 +283,16 @@ export const Main = () => {
     const handleProgramChange = (event) => {
         setSelectedProgram(event);
         setSelectedSharedProgram(event);
+
+        const mutation = {
+            resource: `dataStore/${config.dataStoreName}/activeProgram`,
+            type: 'create',
+            data: event
+        }
+        engine.mutate(mutation).catch(e => {
+            mutation.type = 'update';
+            engine.mutate(mutation);
+        })
     }
 
     const stateDateChanged = event => {
@@ -424,6 +425,7 @@ export const Main = () => {
     }
 
     const saveEdits = () => {
+        setSaving(true);
         const events = [];
 
         const filterValues = (values, formattedDate) => {
@@ -446,13 +448,11 @@ export const Main = () => {
             })
         }
         //Loop through each edit records and recreate event data for
-        console.log('Edits')
         _edits.forEach(edit => {
             Map.groupBy(edit.values, ({date}) => formatDate(date)).keys().forEach(eventDate => {
                 let event = edit.entity?.enrollments[0].events?.find(event => event.programStage === selectedStage &&
                     formatDate(event.occurredAt) === eventDate);
                 const values = filterValues(edit.values, eventDate);
-                console.log('Edit', edit, event)
                 if (!event) {
                     const existingEvent = edit.entity.enrollments[0].events?.find(event => event.programStage === selectedStage);
                     if (existingEvent && !repeatable) {
@@ -487,7 +487,7 @@ export const Main = () => {
                     }
                 });
 
-                (configuredStages[selectedStage]['groupDataElements'] || []).map(de => {
+                (configuredStages[selectedStage] && configuredStages[selectedStage]['groupDataElements'] || []).map(de => {
                     return {
                         dataElement: de,
                         value: groupDataElementValue(de)
@@ -525,12 +525,8 @@ export const Main = () => {
         }).then((response) => {
             if (response.status === 'OK') {
                 setEdits([]);
-                refetch({
-                    program: selectedProgram,
-                    orgUnit: orgUnit,
-                    page,
-                    pageSize
-                });
+                setSaving(false);
+                setPage(1);
                 show({msg: i18n.t('Data successfully updated'), type: 'success'});
             } else {
                 show({msg: i18n.t('There was an error updating records'), type: 'error'});
@@ -611,49 +607,7 @@ export const Main = () => {
     const createOrUpdateGroupEvent = (dataElement, value) => {
         const values = groupValues;
         values[dataElement.id] = value;
-        setGroupValues(values);
-    }
-
-    const createOrUpdateIndividualEvent = (entity, dataElement, value) => {
-        createOrUpdateEvent(entity, startDate, dataElement, value);
-    }
-
-    const individualDataElementsForDates = () => {
-        const configuredDataElements = [];
-        switch (datesBetween(startDate, endDate)) {
-            case 1:
-                configuredDataElements.push('xC0qvYXW3kB');
-                break;
-            case 2:
-                configuredDataElements.push(...['xC0qvYXW3kB', 'NOA57B7ry6m']);
-                break;
-            case 3:
-                configuredDataElements.push(...['xC0qvYXW3kB', 'NOA57B7ry6m', 'wnlNJ6YXPEB']);
-                break;
-            case 4:
-                configuredDataElements.push(...['xC0qvYXW3kB', 'NOA57B7ry6m', 'wnlNJ6YXPEB', 'wiy7OJe82vw']);
-                break;
-            case 5:
-                configuredDataElements.push(...['xC0qvYXW3kB', 'NOA57B7ry6m', 'wnlNJ6YXPEB', 'wiy7OJe82vw', 'Zl2C1J82Iko']);
-                break;
-            case 6:
-                configuredDataElements.push(...['xC0qvYXW3kB', 'NOA57B7ry6m', 'wnlNJ6YXPEB', 'wiy7OJe82vw', 'Zl2C1J82Iko', 'swP5ko96SyC']);
-                break;
-            case 7:
-                configuredDataElements.push(...['xC0qvYXW3kB', 'NOA57B7ry6m', 'wnlNJ6YXPEB', 'wiy7OJe82vw', 'Zl2C1J82Iko', 'swP5ko96SyC', 'pb3dozumaA9']);
-                break;
-            case 8:
-                configuredDataElements.push(...['xC0qvYXW3kB', 'NOA57B7ry6m', 'wnlNJ6YXPEB', 'wiy7OJe82vw', 'Zl2C1J82Iko', 'swP5ko96SyC', 'pb3dozumaA9', 'nz0xDT9pdgw']);
-                break;
-            case 9:
-                configuredDataElements.push(...['xC0qvYXW3kB', 'NOA57B7ry6m', 'wnlNJ6YXPEB', 'wiy7OJe82vw', 'Zl2C1J82Iko', 'swP5ko96SyC', 'pb3dozumaA9', 'nz0xDT9pdgw', 'SdP4s8SRDX1']);
-                break;
-            case 10:
-                configuredDataElements.push(...['xC0qvYXW3kB', 'NOA57B7ry6m', 'wnlNJ6YXPEB', 'wiy7OJe82vw', 'Zl2C1J82Iko', 'swP5ko96SyC', 'pb3dozumaA9', 'nz0xDT9pdgw', 'SdP4s8SRDX1', 'aX5CYDBVHBF']);
-                break;
-        }
-
-        return configuredDataElements;
+        setGroupValues(Object.assign({}, values));
     }
 
     const saveGroupTemplate = () => {
@@ -694,496 +648,372 @@ export const Main = () => {
     return (
         <>
             <div className="flex flex-row w-full h-full">
-                <div
-                    className="w-2/12 bg-[#f8f4f3] p-4 z-50 transition-transform">
-                    <a href="#" className="flex items-center pb-4 border-b border-b-gray-800">
-
-                        <h2 className="font-bold text-2xl">{MainTitle}</h2>
-                    </a>
-                    <OrganisationUnitComponent
-                        handleOUChange={handleOUChange}
-                        selectedOU={selectedOU}
-                    />
-                </div>
-                <div className="w-10/12 ml-4 mr-4 p-4 bg-gray-100 min-h-screen transition-all rounded-md">
+                <div className="page">
                     <Navigation/>
                     <div className="p-6">
                         <div className="mx-auto w-full">
                             <div className="w-full">
-                                <div className="flex flex-col">
-                                    <div className="flex flex-col gap-1 mb-2">
-                                        <div className="flex flex-row w-full rounded-md bg-white p-3 gap-x-1">
-                                            <div className="w-3/12">
-                                                <ProgramComponent
-                                                    selectedProgram={selectedProgram}
-                                                    setSelectedProgram={handleProgramChange}
-                                                    disabled={!selectedSharedOrgUnit}
-                                                />
-                                            </div>
-                                            <div className="w-3/12">
-                                                <ProgramStageComponent
-                                                    selectedProgram={selectedProgram}
-                                                    selectedStage={selectedStage}
-                                                    setSelectedStage={(stage) => {
-                                                        setSelectedStage(stage)
-                                                        setSelectedSharedStage(stage)
-                                                    }
-                                                    }
-                                                />
-                                            </div>
+                                <div className="w-full flex flex-row pt-2 gap-x-1">
+                                    <div
+                                        className={orgUnit ? 'w-3/12 flex flex-row card' : 'flex flex-row card w-full'}>
+                                        <div className="w-3/12 p-3">
+                                            <label htmlFor="stage"
+                                                   className="label">
+                                                {i18n.t('Event Venue')}
+                                            </label>
+                                            <OrganisationUnitComponent
+                                                handleOUChange={handleOUChange}
+                                                selectedOU={selectedOU}
+                                            />
+                                            {!orgUnit &&
+                                                <label className="label pl-2 pt-4 text-sm italic">
+                                                    {i18n.t('Select an Org Unit to start attendance recording')}
+                                                </label>
+                                            }
                                         </div>
                                     </div>
-                                    {Object.keys(filterAttributes).length > 0 &&
-                                        <div className="rounded-md bg-white p-3 mb-2 w-full gap-x-1">
-                                            <label htmlFor="stage"
-                                                   className="block mb-2 text-sm font-medium text-gray-900 dark:text-white border-b-2 border-b-gray-800">
-                                                {i18n.t('Entity Filter')}
-                                            </label>
-                                            <div className="p-2 flex flex-row flex-wrap">
-                                                {filterAttributes.map((attr, idx) => {
-                                                    const entityAttribute = entityAttributes.find(ea => ea.id === attr);
-                                                    if (entityAttribute) {
-                                                        return <>
-                                                            <DataElementComponent key={idx}
-                                                                                  dataElement={attr}
-                                                                                  labelVisible={true}
-                                                                                  value={filterValue[attr]}
-                                                                                  label={entityAttributes.find(a => a.id === attr)?.displayName}
-                                                                                  valueChanged={(_, v) => filterEntities(attr, v)}/>
-                                                        </>
-                                                    }
-                                                })}
-                                            </div>
-                                        </div>
-                                    }
-                                    {selectedStage &&
-                                        <div className="flex flex-col w-full mb-2">
-                                            <div className="w-full rounded-md bg-white p-3 flex flex-row gap-x-1">
-                                                <div className="w-3/12 flex flex-col">
-                                                    <label
-                                                        className="text-left block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-                                                        {((endDateVisible && repeatable) || groupEdit) ? 'Event Start Date' : 'Event Date'}
-                                                    </label>
-                                                    <CalendarInput
-                                                        label=""
-                                                        calendar="gregory"
-                                                        date={startDate && startDate.toISOString ? startDate?.toISOString().slice(0, 10) : ''}
-                                                        onDateSelect={stateDateChanged}
-                                                    />
-                                                </div>
-                                                {((endDateVisible && repeatable) || groupEdit) &&
-                                                    <div className="w-3/12 flex flex-col">
-                                                        <label
-                                                            className="text-left block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-                                                            {'Event End Date'}
-                                                        </label>
-                                                        <CalendarInput
-                                                            label=""
-                                                            calendar="gregory"
-                                                            date={endDate && endDate.toISOString ? endDate?.toISOString().slice(0, 10) : ''}
-                                                            max={new Date().toISOString().slice(0, 10)}
-                                                            onDateSelect={endDateChanged}
-                                                        />
-                                                    </div>
-                                                }
-                                            </div>
-                                            {groupEdit && (selectedStage || groupValues) && dataElements.length > 0 && (configuredStages[selectedStage]['groupDataElements'] || []).length > 0 &&
-                                                <div className="w-full flex flex-col pt-2">
-                                                    <div className="p-8 mt-6 lg:mt-0 rounded shadow bg-white">
-                                                        {configuredStages[selectedStage] && Object.keys(configuredStages[selectedStage]['templates'] || {}).length > 0 &&
+                                    {orgUnit &&
+                                        <div className="mx-auto w-full">
+                                            <div className="w-full">
+                                                <div className="flex flex-col">
+                                                    <div className="flex flex-col gap-1 mb-2">
+                                                        <div
+                                                            className="flex flex-row w-full rounded-md bg-white p-3 gap-x-1">
                                                             <div className="w-3/12">
-                                                                <label htmlFor="stage"
-                                                                       className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-                                                                    {i18n.t('Select Saved Event')}
-                                                                </label>
-                                                                <select id="stage"
-                                                                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                                                                        value={selectedTemplate}
-                                                                        onChange={(event) => handleTemplateChange(event.target.value)}>
-                                                                    <option selected>Choose event</option>
-                                                                    {Object.keys(configuredStages[selectedStage]['templates'] || {}).map((name) => (
-                                                                            <option label={name} value={name} key={name}/>
-                                                                        )
-                                                                    )}
-                                                                </select>
+                                                                <ProgramComponent
+                                                                    selectedProgram={selectedProgram}
+                                                                    setSelectedProgram={handleProgramChange}
+                                                                    disabled={!selectedSharedOrgUnit}
+                                                                />
                                                             </div>
-                                                        }
-                                                        <div
-                                                            className="relative overflow-x-auto shadow-md sm:rounded-lg">
-                                                            <div className="w-3/12 p-2">
-                                                                {dataElements.length > 0 && (configuredStages[selectedStage]['groupDataElements'] || []).map((cde, idx) => {
-                                                                    const de = dataElements.find(de => de.id === cde);
-                                                                    return <>
-                                                                        <DataElementComponent key={idx}
-                                                                                              value={groupDataElementValue(cde)}
-                                                                                              dataElement={de}
-                                                                                              labelVisible={true}
-                                                                                              valueChanged={createOrUpdateGroupEvent}/>
-                                                                    </>
+                                                            <div className="w-3/12">
+                                                                <ProgramStageComponent
+                                                                    selectedProgram={selectedProgram}
+                                                                    selectedStage={selectedStage}
+                                                                    setSelectedStage={(stage) => {
+                                                                        setSelectedStage(stage)
+                                                                        setSelectedSharedStage(stage)
+                                                                        const mutation = {
+                                                                            resource: `dataStore/${config.dataStoreName}/activeStage`,
+                                                                            type: 'create',
+                                                                            data: stage
+                                                                        }
+                                                                        engine.mutate(mutation).catch(e => {
+                                                                            mutation.type = 'update';
+                                                                            engine.mutate(mutation);
+                                                                        })
+                                                                    }
+                                                                    }
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {Object.keys(filterAttributes).length > 0 &&
+                                                        <div className="rounded-md bg-white p-3 mb-2 w-full gap-x-1">
+                                                            <label htmlFor="stage"
+                                                                   className="block mb-2 text-sm font-medium text-gray-900 dark:text-white border-b-2 border-b-gray-800">
+                                                                {i18n.t('Entity Filter')}
+                                                            </label>
+                                                            <div className="p-2 flex flex-row flex-wrap">
+                                                                {filterAttributes.map((attr, idx) => {
+                                                                    const entityAttribute = entityAttributes.find(ea => ea.id === attr);
+                                                                    if (entityAttribute) {
+                                                                        return <>
+                                                                            <DataElementComponent key={idx}
+                                                                                                  dataElement={attr}
+                                                                                                  labelVisible={true}
+                                                                                                  value={filterValue[attr]}
+                                                                                                  label={entityAttributes.find(a => a.id === attr)?.displayName}
+                                                                                                  valueChanged={(_, v) => filterEntities(attr, v)}/>
+                                                                        </>
+                                                                    }
                                                                 })}
                                                             </div>
                                                         </div>
-                                                        {configuredStages[selectedStage] && (configuredStages[selectedStage]['groupDataElements'] || []).length > 0 &&
-                                                            <div className="flex flex-row justify-end">
-                                                                <button type="button"
-                                                                        className="mt-2 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-                                                                        onClick={() => setModalShow(true)}>Save Event
-                                                                </button>
-                                                            </div>
-                                                        }
-                                                    </div>
-                                                </div>
-                                            }
-                                            {selectedStage &&
-                                                <div className="w-full flex flex-col pt-2">
-                                                    <div className="p-8 mt-6 lg:mt-0 rounded shadow bg-white">
-                                                        <div
-                                                            className="relative overflow-x-auto shadow-md sm:rounded-lg">
-                                                            <table
-                                                                className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                                                                <caption
-                                                                    className="p-5 text-lg font-semibold text-left rtl:text-right text-gray-900 bg-white dark:text-white dark:bg-gray-800">
-
-                                                                    <p className="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
-
-                                                                    </p>
-                                                                    <div className="flex flex-row justify-end">
-                                                                        <button type="button"
-                                                                                className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-                                                                                onClick={() => setConfirmShow(true)}>Reload
-                                                                            records
-                                                                        </button>
-                                                                        {edits.length !== 0 && selectedEntities.length > 0 &&
-                                                                            <button type="button"
-                                                                                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-                                                                                    onClick={saveEdits}>Save Records
-                                                                            </button>
-                                                                        }
+                                                    }
+                                                    {selectedStage &&
+                                                        <div className="flex flex-col w-full mb-2">
+                                                            <div
+                                                                className="w-full rounded-md bg-white p-3 flex flex-row gap-x-1">
+                                                                <div className="w-3/12 flex flex-col">
+                                                                    <label
+                                                                        className="text-left block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                                                                        {((endDateVisible && repeatable)) ? 'Event Start Date' : 'Event Date'}
+                                                                    </label>
+                                                                    <CalendarInput
+                                                                        label=""
+                                                                        calendar="gregory"
+                                                                        date={startDate && startDate.toISOString ? startDate?.toISOString().slice(0, 10) : ''}
+                                                                        onDateSelect={stateDateChanged}
+                                                                    />
+                                                                </div>
+                                                                {((endDateVisible && repeatable)) &&
+                                                                    <div className="w-3/12 flex flex-col">
+                                                                        <label
+                                                                            className="text-left block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                                                                            {'Event End Date'}
+                                                                        </label>
+                                                                        <CalendarInput
+                                                                            label=""
+                                                                            calendar="gregory"
+                                                                            date={endDate && endDate.toISOString ? endDate?.toISOString().slice(0, 10) : ''}
+                                                                            max={new Date().toISOString().slice(0, 10)}
+                                                                            onDateSelect={endDateChanged}
+                                                                        />
                                                                     </div>
-                                                                </caption>
-                                                                <thead
-                                                                    className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                                                                <tr>
-                                                                    {groupEdit &&
-                                                                        <th rowSpan={2}
-                                                                            className="px-6 py-6">
-                                                                            <div
-                                                                                className="flex items-center mb-4">
-                                                                                <input
-                                                                                    type="checkbox"
-                                                                                    onChange={(event) => {
-                                                                                        if (event.target.checked) {
-                                                                                            console.log('All entities', allEntities)
-                                                                                            setSelectedEntities(allEntities)
-                                                                                        } else {
-                                                                                            setSelectedEntities([])
-                                                                                            setEdits([])
-                                                                                        }
-                                                                                    }}
-                                                                                    checked={selectedEntities.length === entities.length}
-                                                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
+                                                                }
+                                                            </div>
+                                                            {groupEdit && selectedStage && dataElements.length > 0 && configuredStages[selectedStage] && (configuredStages[selectedStage]['groupDataElements'] || []).length > 0 &&
+                                                                <div className="w-full flex flex-col pt-2">
+                                                                    <div
+                                                                        className="p-8 mt-6 lg:mt-0 rounded shadow bg-white">
+                                                                        {configuredStages[selectedStage] && Object.keys(configuredStages[selectedStage]['templates'] || {}).length > 0 &&
+                                                                            <div className="w-3/12">
+                                                                                <label htmlFor="stage"
+                                                                                       className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                                                                                    {i18n.t('Select Saved Event')}
+                                                                                </label>
+                                                                                <select id="stage"
+                                                                                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                                                                        value={selectedTemplate}
+                                                                                        onChange={(event) => handleTemplateChange(event.target.value)}>
+                                                                                    <option selected>Choose event
+                                                                                    </option>
+                                                                                    {Object.keys(configuredStages[selectedStage]['templates'] || {}).map((name) => (
+                                                                                            <option label={name}
+                                                                                                    value={name}
+                                                                                                    key={name}/>
+                                                                                        )
+                                                                                    )}
+                                                                                </select>
                                                                             </div>
-                                                                        </th>
-                                                                    }
-                                                                    <th data-priority="1" className="px-6 py-3"
-                                                                        rowSpan={2}>#
-                                                                    </th>
-                                                                    <th data-priority="2" className="px-6 py-3"
-                                                                        rowSpan={2}>Profile
-                                                                    </th>
-                                                                    {groupEdit &&
-                                                                        <th data-priority="3"
-                                                                            className="px-6 py-3 mx-auto text-center"
-                                                                            colSpan={columnDisplay ? datesBetween(startDate, endDate) : 1}>
-                                                                        </th>
-                                                                    }
-                                                                </tr>
-                                                                {/*{endDateVisible && !columnDisplay && !groupEdit &&
-                                                        <tr>
-                                                            {dates.map((date, idx) => {
-                                                                return <th key={idx}
-                                                                           className="px-6 py-3">
-                                                                    <div className="flex flex-row gap-1">
+                                                                        }
                                                                         <div
-                                                                        className="flex items-center mb-4">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            value=""
-                                                                            onChange={(event) => {
-                                                                                selectDate(date, event.target.checked)
-                                                                            }}
-                                                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
-                                                                    </div>
-                                                                        {formatDate(date)}
-                                                                    </div>
-                                                                </th>
-                                                            })}
-                                                        </tr>
-                                                    }*/}
-                                                                {/*{endDateVisible && columnDisplay && !groupEdit &&
-                                                        <>
-                                                            <tr>
-                                                                {dates.map((date, idx) => {
-                                                                    return <th key={idx}
-                                                                               colSpan={(configuredStages[selectedStage]['dataElements'] || []).length}
-                                                                               className="px-6 py-3">
-                                                                        <div className="flex flex-row gap-1">
-                                                                            <div
-                                                                        className="flex items-center mb-4">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            value=""
-                                                                            onChange={(event) => {
-                                                                                selectDate(date, event.target.checked)
-                                                                            }}
-                                                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
-                                                                    </div>
-                                                                            {formatDate(date)}
+                                                                            className="relative overflow-x-auto shadow-md sm:rounded-lg">
+                                                                            <div className="w-3/12 p-2">
+                                                                                {dataElements.length > 0 && configuredStages[selectedStage] && (configuredStages[selectedStage]['groupDataElements'] || []).map((cde, idx) => {
+                                                                                    const de = dataElements.find(de => de.id === cde);
+                                                                                    return <>
+                                                                                        {de &&
+                                                                                            <DataElementComponent
+                                                                                                key={idx}
+                                                                                                value={groupDataElementValue(cde)}
+                                                                                                dataElement={de}
+                                                                                                labelVisible={true}
+                                                                                                valueChanged={createOrUpdateGroupEvent}/>
+                                                                                        }
+                                                                                    </>
+                                                                                })}
+                                                                            </div>
                                                                         </div>
-                                                                    </th>
-                                                                })}
-                                                            </tr>
-                                                            <tr>
-                                                                {dates.map(_ => {
-                                                                    return <>
-                                                                        {
-                                                                            (configuredStages[selectedStage]['dataElements'] || []).map((id, idx) => {
-                                                                                const de = dataElements.find(e => e.id === id)
-                                                                                return <th key={idx}
-                                                                                           rowSpan={5}
-                                                                                           className="px-6 py-3">
-                                                                                    <div
-                                                                                        className="text-left -rotate-90 w-16 pb-4">{de?.name}</div>
-                                                                                </th>
-                                                                            })
+                                                                        {configuredStages[selectedStage] && (configuredStages[selectedStage]['groupDataElements'] || []).length > 0 &&
+                                                                            <div className="flex flex-row justify-end">
+                                                                                <button type="button"
+                                                                                        className="mt-2 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+                                                                                        onClick={() => setModalShow(true)}>Save
+                                                                                    Event
+                                                                                </button>
+                                                                            </div>
                                                                         }
-                                                                    </>
-                                                                })}
-                                                            </tr>
-                                                        </>
-                                                    }*/}
-                                                                {!groupEdit && configuredStages[selectedStage] &&
-                                                                    <tr>
-                                                                        {(configuredStages[selectedStage]['dataElements'] || []).map((id, idx) => {
-                                                                            const de = dataElements.find(e => e.id === id);
-                                                                            return <th key={idx}
-                                                                                       rowSpan={5}
-                                                                                       className="px-6 py-3">
-                                                                            <span
-                                                                                className="whitespace-nowrap text-xs block font-normal text-gray-900 dark:text-gray-300 text-left -rotate-90 w-16 pb-4">{de?.name}</span>
-                                                                            </th>
-                                                                        })}
-                                                                    </tr>
-                                                                }
-                                                                {groupEdit &&
-                                                                    <>
-                                                                        <tr>
-                                                                            {individualDataElementsForDates().map((id, idx) => {
-                                                                                const de = dataElements.find(e => e.id === id)
-                                                                                return <th key={idx}
-                                                                                           rowSpan={7}
-                                                                                           className="px-6 py-3">
-                                                                                    <div
-                                                                                        className="text-left -rotate-90 w-16 pb-4">{de?.name}</div>
-                                                                                </th>
-                                                                            })}
-                                                                        </tr>
-                                                                        {/* <tr>
-                                                                {dates.map(_ => {
-                                                                    return <>
-                                                                        {
-                                                                            (configuredStages[selectedStage]['dataElements'] || []).map((id, idx) => {
-                                                                                const de = dataElements.find(e => e.id === id)
-                                                                                return <th key={idx}
-                                                                                           rowSpan={5}
-                                                                                           className="px-6 py-3">
-                                                                                    <div
-                                                                                        className="text-left -rotate-90 w-16 pb-4">{de?.name}</div>
-                                                                                </th>
-                                                                            })
-                                                                        }
-                                                                    </>
-                                                                })}
-                                                            </tr>*/}
-                                                                    </>
-                                                                }
-                                                                </thead>
-                                                                <tbody>
-                                                                {entities.map((entity, index) => {
-                                                                    return <>
-                                                                        <tr className="pr-3 text-right odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
-                                                                            {groupEdit &&
-                                                                                <td className="px-6 py-6">
-                                                                                    <div
-                                                                                        className="flex items-center mb-4">
-                                                                                        <input
-                                                                                            type="checkbox"
-                                                                                            checked={selectedEntities.map(e => e.trackedEntity).includes(entity.trackedEntity)}
-                                                                                            onChange={() => {
-                                                                                                if (selectedEntities.map(e => e.trackedEntity).includes(entity.trackedEntity)) {
-                                                                                                    setSelectedEntities(selectedEntities.filter(rowId => rowId.trackedEntity !== entity.trackedEntity));
-                                                                                                    setEdits(edits.filter(edit => edit.entity.trackedEntity !== entity.trackedEntity))
-                                                                                                } else {
-                                                                                                    setSelectedEntities([...selectedEntities, entity]);
-
-                                                                                                    let currentEdit = edits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
-                                                                                                    if (!currentEdit) {
-                                                                                                        currentEdit = {
-                                                                                                            entity
-                                                                                                        };
-                                                                                                    }
-                                                                                                    const sample = edits[0];
-                                                                                                    if (sample) {
-                                                                                                        currentEdit.values = sample.values;
-
-                                                                                                        setEdits([...edits, currentEdit]);
-                                                                                                    }
-                                                                                                }
-                                                                                            }}
-                                                                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
-                                                                                    </div>
-                                                                                </td>
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                            {selectedStage &&
+                                                                <div className="w-full flex flex-col pt-2">
+                                                                    <div
+                                                                        className="p-8 mt-6 lg:mt-0 rounded shadow bg-white">
+                                                                        <div
+                                                                            className={loading ? 'opacity-20 relative overflow-x-auto shadow-md sm:rounded-lg' : 'relative overflow-x-auto shadow-md sm:rounded-lg'}>
+                                                                            {loading &&
+                                                                                <SpinnerComponent/>
                                                                             }
-                                                                            <td>{index + 1}</td>
-                                                                            <td className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{getParticipant(entity)}</td>
-                                                                            {!groupEdit && dates.map((date, idx) => {
-                                                                                if (!columnDisplay) {
-                                                                                    return <>
-                                                                                        <td key={idx}
-                                                                                            className="px-6 py-4">
-                                                                                            <div
-                                                                                                className="flex flex-row">
-                                                                                                {/* <div
-                                                                                    className="w-1/12 flex flex-col">
-                                                                                    <div
-                                                                                        className="flex items-center mb-4">
-                                                                                        <input
-                                                                                            type="checkbox"
-                                                                                            checked={dateChecked(entity, date) === true}
-                                                                                            onChange={(event) => {
-                                                                                                checkEntity(entity, date, event.target.checked)
-                                                                                            }}
-                                                                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
-                                                                                    </div>
-                                                                                </div>*/}
-                                                                                                <div
-                                                                                                    className="w-11/12 flex flex-col">
-                                                                                                    <div
-                                                                                                        className="flex flex-col gap-1">
-                                                                                                        {(dataElements.length > 0 && configuredStages[selectedStage]['dataElements'] || []).map((cde, idx) => {
-                                                                                                            const de = dataElements.find(de => de.id === cde);
-                                                                                                            return <>
-                                                                                                                <DataElementComponent
-                                                                                                                    key={idx}
-                                                                                                                    value={dataElementValue(date, de.id, entity)}
-                                                                                                                    dataElement={de}
-                                                                                                                    labelVisible={true}
-                                                                                                                    valueChanged={(d, v) => createOrUpdateEvent(entity, date, de, v)}/>
-                                                                                                            </>
-                                                                                                        })}
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        </td>
-                                                                                    </>
-                                                                                } else {
-                                                                                    return <>
-                                                                                        {(configuredStages[selectedStage]['dataElements'] || []).map((id, idx2) => {
-                                                                                            const de = dataElements.find(de => de.id === id);
+                                                                            <table
+                                                                                className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                                                                                <caption
+                                                                                    className="p-5 text-lg font-semibold text-left rtl:text-right text-gray-900 bg-white dark:text-white dark:bg-gray-800">
 
-                                                                                            return <>
-                                                                                                <td>
-                                                                                                    <DataElementComponent
-                                                                                                        key={idx2}
-                                                                                                        value={dataElementValue(date, de.id, entity)}
-                                                                                                        dataElement={de}
-                                                                                                        labelVisible={true}
-                                                                                                        valueChanged={(d, v) => createOrUpdateEvent(entity, date, de, v)}/>
-                                                                                                </td>
-                                                                                            </>
-                                                                                        })}
-                                                                                    </>
-                                                                                }
-                                                                            })}
-                                                                            {groupEdit && (['']).map((_, idx) => {
-                                                                                if (!columnDisplay) {
-                                                                                    return <>
-                                                                                        <td key={idx}
-                                                                                            className="px-6 py-4">
-                                                                                            <div
-                                                                                                className="flex flex-row">
-                                                                                                {/* <div
-                                                                                    className="w-1/12 flex flex-col">
+                                                                                    <p className="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+
+                                                                                    </p>
                                                                                     <div
-                                                                                        className="flex items-center mb-4">
-                                                                                        <input
-                                                                                            type="checkbox"
-                                                                                            checked={dateChecked(entity, date) === true}
-                                                                                            onChange={(event) => {
-                                                                                                checkEntity(entity, date, event.target.checked)
-                                                                                            }}
-                                                                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
+                                                                                        className="flex flex-row justify-end">
+                                                                                        <button type="button"
+                                                                                                className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+                                                                                                onClick={() => setConfirmShow(true)}>Reload
+                                                                                            records
+                                                                                        </button>
+                                                                                        {edits.length !== 0 && selectedEntities.length > 0 &&
+                                                                                            <button type="button"
+                                                                                                    className={saving || loading ? 'primary-btn-disabled' : 'primary-btn'}
+                                                                                                    onClick={saveEdits}>
+                                                                                                {(saving || loading) &&
+                                                                                                    <SpinnerComponent/>
+                                                                                                }
+                                                                                                Save Records
+                                                                                            </button>
+                                                                                        }
                                                                                     </div>
-                                                                                </div>*/}
-                                                                                                <div
-                                                                                                    className="w-11/12 flex flex-col">
-                                                                                                    <div
-                                                                                                        className="flex flex-col gap-1">
-                                                                                                        {dataElements.length > 0 && individualDataElementsForDates().map((cde, idx) => {
-                                                                                                            const de = dataElements.find(de => de.id === cde);
-                                                                                                            return <>
-                                                                                                                <DataElementComponent
-                                                                                                                    key={idx}
-                                                                                                                    value={dataElementValue(startDate, de.id, entity)}
-                                                                                                                    dataElement={de}
-                                                                                                                    labelVisible={true}
-                                                                                                                    valueChanged={(d, v) => createOrUpdateIndividualEvent(entity, de, v)}/>
-                                                                                                            </>
-                                                                                                        })}
-                                                                                                    </div>
-                                                                                                </div>
+                                                                                </caption>
+                                                                                <thead
+                                                                                    className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                                                                <tr>
+                                                                                    {groupEdit &&
+                                                                                        <th className="px-6 py-6 w-1/12">
+                                                                                            <div
+                                                                                                className="flex items-center mb-4">
+                                                                                                <input
+                                                                                                    type="checkbox"
+                                                                                                    onChange={(event) => {
+                                                                                                        if (event.target.checked) {
+                                                                                                            setSelectedEntities(allEntities)
+                                                                                                        } else {
+                                                                                                            setSelectedEntities([])
+                                                                                                            setEdits([])
+                                                                                                        }
+                                                                                                    }}
+                                                                                                    checked={selectedEntities.length === entities.length}
+                                                                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
                                                                                             </div>
-                                                                                        </td>
-                                                                                    </>
-                                                                                } else {
+                                                                                        </th>
+                                                                                    }
+                                                                                    <th data-priority="1"
+                                                                                        className="px-6 py-3 w-1/12">#
+                                                                                    </th>
+                                                                                    <th data-priority="2"
+                                                                                        className={groupEdit ? 'px-6 py-3 w-10/12' : (!configuredStages[selectedStage] || (configuredStages[selectedStage]['dataElements'] || []).length === 0) ? 'px-6 py-3 w-10/12' : 'px-6 py-3 w-3/12'}
+                                                                                        rowSpan={2}>Profile
+                                                                                    </th>
+                                                                                    {!groupEdit && configuredStages[selectedStage] && (configuredStages[selectedStage]['dataElements'] || []).map((id, idx) => {
+                                                                                        const de = dataElements.find(e => e.id === id);
+                                                                                        return <th key={idx}
+                                                                                                   rowSpan={5}
+                                                                                                   style={{width: `${66.66 / ((configuredStages[selectedStage]['dataElements'] || []).length || 1)}px`}}
+                                                                                                   className="px-4 py-3 h-72 border">
+                                                                            <span
+                                                                                className="whitespace-nowrap block text-left -rotate-90 w-16 pb-1">{de?.name}</span>
+                                                                                        </th>
+                                                                                    })
+                                                                                    }
+                                                                                </tr>
+                                                                                </thead>
+                                                                                <tbody>
+                                                                                {entities.map((entity, index) => {
                                                                                     return <>
-                                                                                        {dataElements.length > 0 && individualDataElementsForDates().map((cde, idx2) => {
-                                                                                            const de = dataElements.find(de => de.id === cde);
-                                                                                            return <>
-                                                                                                <td>
+                                                                                        <tr className="pr-3 text-right odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
+                                                                                            {groupEdit &&
+                                                                                                <td className="px-6 py-6">
                                                                                                     <div
-                                                                                                        className="flex flex-col my-auto">
-                                                                                                        <DataElementComponent
-                                                                                                            key={idx2}
-                                                                                                            value={dataElementValue(startDate, de.id, entity)}
-                                                                                                            dataElement={de}
-                                                                                                            labelVisible={false}
-                                                                                                            valueChanged={(d, v) => {
-                                                                                                                createOrUpdateIndividualEvent(entity, de, v)
-                                                                                                            }}/>
+                                                                                                        className="flex items-center mb-4">
+                                                                                                        <input
+                                                                                                            type="checkbox"
+                                                                                                            checked={selectedEntities.map(e => e.trackedEntity).includes(entity.trackedEntity)}
+                                                                                                            onChange={() => {
+                                                                                                                if (selectedEntities.map(e => e.trackedEntity).includes(entity.trackedEntity)) {
+                                                                                                                    setSelectedEntities(selectedEntities.filter(rowId => rowId.trackedEntity !== entity.trackedEntity));
+                                                                                                                    setEdits(edits.filter(edit => edit.entity.trackedEntity !== entity.trackedEntity))
+                                                                                                                } else {
+                                                                                                                    setSelectedEntities([...selectedEntities, entity]);
+
+                                                                                                                    let currentEdit = edits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
+                                                                                                                    if (!currentEdit) {
+                                                                                                                        currentEdit = {
+                                                                                                                            entity
+                                                                                                                        };
+                                                                                                                    }
+                                                                                                                    const sample = edits[0];
+                                                                                                                    if (sample) {
+                                                                                                                        currentEdit.values = sample.values;
+
+                                                                                                                        setEdits([...edits, currentEdit]);
+                                                                                                                    }
+                                                                                                                }
+                                                                                                            }}
+                                                                                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
                                                                                                     </div>
                                                                                                 </td>
-                                                                                            </>
-                                                                                        })}
+                                                                                            }
+                                                                                            <td>{index + 1}</td>
+                                                                                            <td className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{getParticipant(entity)}</td>
+                                                                                            {!groupEdit && configuredStages[selectedStage] && dates.map((date, idx) => {
+                                                                                                if (!columnDisplay) {
+                                                                                                    return <>
+                                                                                                        <td key={idx}
+                                                                                                            className="px-6 py-4">
+                                                                                                            <div
+                                                                                                                className="flex flex-row">
+                                                                                                                <div
+                                                                                                                    className="flex flex-col gap-1">
+                                                                                                                    {(dataElements.length > 0 && configuredStages[selectedStage]['dataElements'] || []).map((cde, idx) => {
+                                                                                                                        const de = dataElements.find(de => de.id === cde);
+                                                                                                                        return <>
+                                                                                                                            {de &&
+                                                                                                                                <DataElementComponent
+                                                                                                                                    key={idx}
+                                                                                                                                    value={dataElementValue(date, de.id, entity)}
+                                                                                                                                    dataElement={de}
+                                                                                                                                    labelVisible={true}
+                                                                                                                                    valueChanged={(d, v) => createOrUpdateEvent(entity, date, de, v)}/>
+                                                                                                                            }
+                                                                                                                        </>
+                                                                                                                    })}
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        </td>
+                                                                                                    </>
+                                                                                                } else {
+                                                                                                    return <>
+                                                                                                        {(configuredStages[selectedStage]['dataElements'] || []).map((id, idx2) => {
+                                                                                                            const de = dataElements.find(de => de.id === id);
+                                                                                                            return <>
+                                                                                                                <td className="border">
+                                                                                                                    {de &&
+                                                                                                                        <div
+                                                                                                                            className="pl-2">
+                                                                                                                            <DataElementComponent
+                                                                                                                                key={idx2}
+                                                                                                                                value={dataElementValue(date, de.id, entity)}
+                                                                                                                                dataElement={de}
+                                                                                                                                labelVisible={false}
+                                                                                                                                valueChanged={(d, v) => createOrUpdateEvent(entity, date, de, v)}/>
+                                                                                                                        </div>
+                                                                                                                    }
+                                                                                                                </td>
+                                                                                                            </>
+                                                                                                        })}
+                                                                                                    </>
+                                                                                                }
+                                                                                            })}
+                                                                                        </tr>
                                                                                     </>
-                                                                                }
-                                                                            })}
-                                                                        </tr>
-                                                                    </>
-                                                                })}
-                                                                </tbody>
-                                                                <tfoot>
-                                                                <tr className="font-semibold text-gray-900 dark:text-white">
-                                                                    <th scope="row" className="px-6 py-3 text-base">
-
-                                                                    </th>
-                                                                </tr>
-                                                                </tfoot>
-                                                            </table>
+                                                                                })}
+                                                                                </tbody>
+                                                                                <tfoot>
+                                                                                <tr>
+                                                                                    <th className="w-full p-2"
+                                                                                        colSpan={groupEdit ? 4 : 2 + (configuredStages[selectedStage] && configuredStages[selectedStage]['dataElements'] || []).length}>
+                                                                                        <div
+                                                                                            className="flex flex-row w-full justify-end">
+                                                                                            <Pagination
+                                                                                                page={page}
+                                                                                                pageSize={pageSize}
+                                                                                                pageCount={Math.ceil(total / pageSize)}
+                                                                                                total={total}
+                                                                                                onPageChange={(page) => setPage(page)}
+                                                                                                onPageSizeChange={(size) => setPageSize(size)}
+                                                                                            />
+                                                                                        </div>
+                                                                                    </th>
+                                                                                </tr>
+                                                                                </tfoot>
+                                                                            </table>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            }
                                                         </div>
-                                                    </div>
+                                                    }
                                                 </div>
-                                            }
+                                            </div>
                                         </div>
                                     }
                                 </div>
@@ -1252,13 +1082,8 @@ export const Main = () => {
                     <button type="button"
                             className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
                             onClick={() => {
-                                refetch({
-                                    program: selectedProgram,
-                                    orgUnit: orgUnit,
-                                    page: 1,
-                                    pageSize
-                                });
                                 setConfirmShow(false);
+                                setPage(1);
                             }}>
                         Reload
                     </button>
