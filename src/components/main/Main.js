@@ -2,6 +2,7 @@ import { useAlert, useDataEngine, useDataQuery } from '@dhis2/app-runtime';
 import i18n from '@dhis2/d2-i18n';
 import { CalendarInput, Modal, ModalActions, ModalContent, ModalTitle, Pagination } from '@dhis2/ui';
 import classnames from 'classnames';
+import classes from '../../App.module.css'
 import React, { useContext, useEffect, useState } from 'react';
 import { config } from '../../consts.js';
 import { provisionOUs, SharedStateContext } from '../../utils.js';
@@ -659,7 +660,7 @@ export const Main = () => {
                                         <div className="w-3/12 p-3">
                                             <label htmlFor="stage"
                                                    className="label">
-                                                {i18n.t('Event Venue')}
+                                                {i18n.t('Org Units')}
                                             </label>
                                             <OrganisationUnitComponent
                                                 handleOUChange={handleOUChange}
@@ -672,6 +673,24 @@ export const Main = () => {
                                             }
                                         </div>
                                     </div>
+
+                                    {!orgUnit && 
+                                                                            <div className="mx-auto w-full">
+                                                                            <div className="w-full">
+                                                                                <div className="flex flex-col">
+                                                                                    <div className="flex flex-col gap-1 mb-2">
+                                                                                        <div
+                                                                                            className="flex flex-row w-full rounded-md bg-white p-3 gap-x-1">
+                                                                                                <div className={classes.programAttributeEmptyContainer}>
+                                                                                                    <span style={{ textAlign: 'center' }}> {i18n.t('Select an Organisation Unit')}</span>
+                                                                                                </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                    
+                                    }
                                     {orgUnit &&
                                         <div className="mx-auto w-full">
                                             <div className="w-full">

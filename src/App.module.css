@@ -1,0 +1,8 @@
+.programAttributeEmptyContainer {
+    width: 100%;
+    height: 60px;
+    background-color: #DCE1EA;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
