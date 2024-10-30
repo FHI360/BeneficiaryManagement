@@ -2,12 +2,11 @@ import { useDataEngine, useDataQuery } from '@dhis2/app-runtime';
 import i18n from '@dhis2/d2-i18n';
 import { Transfer } from '@dhis2/ui';
 import React, { useContext, useEffect, useState } from 'react';
-import { config, MainTitle } from '../consts.js';
+import { config } from '../consts.js';
 import ArrowDown from '../icons/arrow-down.svg';
 import ArrowUp from '../icons/arrow-up.svg';
 import { SharedStateContext } from '../utils.js';
 import { Navigation } from './Navigation.js';
-import OrganisationUnitComponent from './OrganisationUnitComponent.js';
 import ProgramComponent from './ProgramComponent.js';
 import ProgramStageComponent from './ProgramStageComponent.js';
 
@@ -15,17 +14,12 @@ const ConfigurationComponent = () => {
     const sharedState = useContext(SharedStateContext)
 
     const {
-        selectedSharedOU,
-        setSelectedSharedOU,
         selectedSharedProgram,
         setSelectedSharedProgram,
         selectedSharedOrgUnit,
-        setSelectedSharedOrgUnit
     } = sharedState;
 
-    const [selectedOU, setSelectedOU] = useState(selectedSharedOU);
     const [keyExists, setKeyExists] = useState({});
-    const [orgUnit, setOrgUnit] = useState('');
     const [selectedProgram, setSelectedProgram] = useState(selectedSharedProgram);
     const [selectedStage, setSelectedStage] = useState('');
     const [attributes, setAttributes] = useState([]);
@@ -158,16 +152,6 @@ const ConfigurationComponent = () => {
             }
         }
     }, [dataStore, selectedProgram]);
-
-    const handleOUChange = event => {
-        setOrgUnit(event.id);
-        setSelectedSharedOrgUnit(event.id);
-        setSelectedOU(event.selected);
-        setSelectedSharedOU(event.selected)
-        if (!event.checked) {
-            setSelectedSharedOrgUnit('')
-        }
-    };
 
     const handleProgramChange = (event) => {
         setSelectedProgram(event);
@@ -464,6 +448,7 @@ const ConfigurationComponent = () => {
                                                     </thead>
                                                     <tbody>
                                                     {dataElements.map((dataElement, index) => {
+                                                        console.log('dataElement', dataElement)
                                                         return <>
                                                             <tr className="pr-3 text-right odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
                                                                 <td className="px-6 py-6">

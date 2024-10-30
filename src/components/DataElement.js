@@ -3,7 +3,7 @@ import { CalendarInput } from '@dhis2/ui';
 import PropTypes from 'prop-types';
 import React, { useEffect, useMemo, useState } from 'react';
 
-export const DataElementComponent = ({ dataElement, labelVisible = true, label, value, valueChanged, readonly }) => {
+export const DataElementComponent = ({ dataElement, labelVisible = true, label, value, valueChanged, readonly, optionAdd = true }) => {
     const engine = useDataEngine();
 
     const [id, setId] = useState('');
@@ -149,7 +149,7 @@ export const DataElementComponent = ({ dataElement, labelVisible = true, label, 
                                     </option>
                                 ))}
                             </select>
-                            {!edit && !readonly &&
+                            {!edit && !readonly && optionAdd &&
                                 <div className="p-2" onClick={() => setEdit(true)}>+</div>
                             }
                         </div>
@@ -255,6 +255,7 @@ DataElementComponent.propTypes = {
     dataElement: PropTypes.object,
     label: PropTypes.string,
     labelVisible: PropTypes.bool,
+    optionAdd: PropTypes.bool,
     readonly: PropTypes.bool,
     value: PropTypes.string,
     valueChanged: PropTypes.func

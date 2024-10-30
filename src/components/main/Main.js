@@ -4,14 +4,18 @@ import { CalendarInput, Modal, ModalActions, ModalContent, ModalTitle, Paginatio
 import classnames from 'classnames';
 import classes from '../../App.module.css'
 import React, { useContext, useEffect, useState } from 'react';
-import { config } from '../../consts.js';
+import { config, REFERENCIAS_OPTIONS } from '../../consts.js';
 import { provisionOUs, SharedStateContext } from '../../utils.js';
+import { DataElementComponent } from '../DataElement.js';
 import { Navigation } from '../Navigation.js';
 import OrganisationUnitComponent from '../OrganisationUnitComponent.js';
-import ProgramComponent from '../ProgramComponent';
-import ProgramStageComponent from '../ProgramStageComponent';
-import { DataElementComponent } from '../DataElement';
-import { SpinnerComponent } from '../SpinnerComponent';
+import ProgramComponent from '../ProgramComponent.js';
+import ProgramStageComponent from '../ProgramStageComponent.js';
+import { ReferenciasComponent } from '../ReferenciasComponent.js';
+import { SpinnerComponent } from '../SpinnerComponent.js';
+
+const REFERENCIAS = 'ItVYsNfJZEX';
+const ACTUALIZACAO = 'xZVwawMNs1d';
 
 export const Main = () => {
     const engine = useDataEngine();
@@ -537,6 +541,7 @@ export const Main = () => {
 
     // eslint-disable-next-line max-params
     const createOrUpdateEvent = (entity, date, dataElement, value) => {
+        console.log('Update', entity, date, dataElement, value)
         if (dataElement.valueType.includes('INTEGER')) {
             value = parseInt(value);
             if (dataElement.valueType === 'INTEGER_ZERO_OR_POSITIVE' && parseInt(value) < 0) {
@@ -605,10 +610,11 @@ export const Main = () => {
         setEdits(_edits);
     }
 
-    const createOrUpdateGroupEvent = (dataElement, value) => {
-        const values = groupValues;
-        values[dataElement.id] = value;
-        setGroupValues(Object.assign({}, values));
+    const createOrUpdateGroupValue = (dataElement, value) => {
+        setGroupValues(prevValues => ({
+            ...prevValues,
+            [dataElement.id]: value,
+        }));
     }
 
     const saveGroupTemplate = () => {
@@ -644,6 +650,10 @@ export const Main = () => {
 
             setGroupValues(values);
         }
+    }
+
+    const referenciasRows = () => {
+        return REFERENCIAS_OPTIONS.filter(o => o.active).length + 1;
     }
 
     return (
@@ -739,8 +749,9 @@ export const Main = () => {
                                                                     if (entityAttribute) {
                                                                         return <>
                                                                             <DataElementComponent key={idx}
-                                                                                                  dataElement={attr}
+                                                                                                  dataElement={entityAttribute}
                                                                                                   labelVisible={true}
+                                                                                                  optionAdd={false}
                                                                                                   value={filterValue[attr]}
                                                                                                   label={entityAttributes.find(a => a.id === attr)?.displayName}
                                                                                                   valueChanged={(_, v) => filterEntities(attr, v)}/>
@@ -809,8 +820,8 @@ export const Main = () => {
                                                                         }
                                                                         <div
                                                                             className="relative overflow-x-auto shadow-md sm:rounded-lg">
-                                                                            <div className="w-3/12 p-2">
-                                                                                {dataElements.length > 0 && configuredStages[selectedStage] && (configuredStages[selectedStage]['groupDataElements'] || []).map((cde, idx) => {
+                                                                            <div className={selectedStage === REFERENCIAS ? 'w-8/12 p-2' : 'w-3/12 p-2'}>
+                                                                                {![REFERENCIAS, ACTUALIZACAO].includes(selectedStage) && dataElements.length > 0 && configuredStages[selectedStage] && (configuredStages[selectedStage]['groupDataElements'] || []).map((cde, idx) => {
                                                                                     const de = dataElements.find(de => de.id === cde);
                                                                                     return <>
                                                                                         {de &&
@@ -819,10 +830,41 @@ export const Main = () => {
                                                                                                 value={groupDataElementValue(cde)}
                                                                                                 dataElement={de}
                                                                                                 labelVisible={true}
-                                                                                                valueChanged={createOrUpdateGroupEvent}/>
+                                                                                                valueChanged={createOrUpdateGroupValue}/>
                                                                                         }
                                                                                     </>
                                                                                 })}
+                                                                                {selectedStage === REFERENCIAS &&
+                                                                                    <table
+                                                                                        className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                                                                                        <thead>
+                                                                                        <tr className="border">
+                                                                                            <th colSpan={6}
+                                                                                                className="bg-gray-200 text-center">
+                                                                                                Referencias
+                                                                                                Completas
+                                                                                            </th>
+                                                                                        </tr>
+                                                                                        <tr className="border">
+                                                                                            <td colSpan="3"
+                                                                                                className="bg-yellow-400 text-center">Referencias
+                                                                                                Feitas
+                                                                                            </td>
+                                                                                            <td colSpan="3"
+                                                                                                className="bg-green-400 text-center">Contra
+                                                                                                Referencias
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                        </thead>
+                                                                                        <tbody>
+                                                                                        <ReferenciasComponent
+                                                                                            group={true}
+                                                                                            groupDataElementValue={groupDataElementValue}
+                                                                                            dataElements={dataElements}
+                                                                                            valueChange={(e, d, dataElement, value) => createOrUpdateGroupValue(dataElement, value)}/>
+                                                                                        </tbody>
+                                                                                    </table>
+                                                                                }
                                                                             </div>
                                                                         </div>
                                                                         {configuredStages[selectedStage] && (configuredStages[selectedStage]['groupDataElements'] || []).length > 0 &&
@@ -861,7 +903,7 @@ export const Main = () => {
                                                                                                 onClick={() => setConfirmShow(true)}>Reload
                                                                                             records
                                                                                         </button>
-                                                                                        {edits.length !== 0 && selectedEntities.length > 0 &&
+                                                                                        {edits.length !== 0 || (selectedEntities.length > 0 && groupValues) &&
                                                                                             <button type="button"
                                                                                                     className={saving || loading ? 'primary-btn-disabled' : 'primary-btn'}
                                                                                                     onClick={saveEdits}>
@@ -875,7 +917,7 @@ export const Main = () => {
                                                                                 </caption>
                                                                                 <thead
                                                                                     className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                                                                                <tr>
+                                                                                <tr className="border">
                                                                                     {groupEdit &&
                                                                                         <th className="px-6 py-6 w-1/12">
                                                                                             <div
@@ -896,20 +938,33 @@ export const Main = () => {
                                                                                         </th>
                                                                                     }
                                                                                     <th data-priority="1"
-                                                                                        className="px-6 py-3 w-1/12">#
+                                                                                        className="px-6 py-3 w-1/12 text-center">#
                                                                                     </th>
                                                                                     <th data-priority="2"
-                                                                                        className={groupEdit ? 'px-6 py-3 w-10/12' : (!configuredStages[selectedStage] || (configuredStages[selectedStage]['dataElements'] || []).length === 0) ? 'px-6 py-3 w-10/12' : 'px-6 py-3 w-3/12'}
+                                                                                        className={groupEdit ? 'px-6 py-3 w-10/12' : (!configuredStages[selectedStage] || (configuredStages[selectedStage]['dataElements'] || []).length === 0) ? 'px-6 py-3 w-10/12 text-center' : 'px-6 py-3 w-3/12 text-center'}
                                                                                         rowSpan={2}>Profile
                                                                                     </th>
-                                                                                    {!groupEdit && configuredStages[selectedStage] && (configuredStages[selectedStage]['dataElements'] || []).map((id, idx) => {
+                                                                                    {!groupEdit && [REFERENCIAS, ACTUALIZACAO].includes(selectedStage) &&
+                                                                                        <>
+                                                                                            {selectedStage === REFERENCIAS &&
+                                                                                                <>
+                                                                                                    <th colSpan={6}
+                                                                                                        className="bg-gray-200 text-center">
+                                                                                                        Referencias
+                                                                                                        Completas
+                                                                                                    </th>
+                                                                                                </>
+                                                                                            }
+                                                                                        </>
+                                                                                    }
+                                                                                    {![REFERENCIAS, ACTUALIZACAO].includes(selectedStage) && !groupEdit && configuredStages[selectedStage] && (configuredStages[selectedStage]['dataElements'] || []).map((id, idx) => {
                                                                                         const de = dataElements.find(e => e.id === id);
                                                                                         return <th key={idx}
                                                                                                    rowSpan={5}
                                                                                                    style={{width: `${66.66 / ((configuredStages[selectedStage]['dataElements'] || []).length || 1)}px`}}
                                                                                                    className="px-4 py-3 h-72 border">
-                                                                            <span
-                                                                                className="whitespace-nowrap block text-left -rotate-90 w-16 pb-1">{de?.name}</span>
+                                                                                            <span
+                                                                                                className="whitespace-nowrap block text-left -rotate-90 w-16 pb-1">{de?.name}</span>
                                                                                         </th>
                                                                                     })
                                                                                     }
@@ -918,7 +973,7 @@ export const Main = () => {
                                                                                 <tbody>
                                                                                 {entities.map((entity, index) => {
                                                                                     return <>
-                                                                                        <tr className="pr-3 text-right odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
+                                                                                        <tr>
                                                                                             {groupEdit &&
                                                                                                 <td className="px-6 py-6">
                                                                                                     <div
@@ -951,9 +1006,26 @@ export const Main = () => {
                                                                                                     </div>
                                                                                                 </td>
                                                                                             }
-                                                                                            <td>{index + 1}</td>
-                                                                                            <td className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{getParticipant(entity)}</td>
-                                                                                            {!groupEdit && configuredStages[selectedStage] && dates.map((date, idx) => {
+                                                                                            <td rowSpan={!groupEdit && selectedStage === REFERENCIAS ? referenciasRows() : 1}>{index + 1}</td>
+                                                                                            <td rowSpan={!groupEdit && selectedStage === REFERENCIAS ? referenciasRows() : 1}
+                                                                                                className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{getParticipant(entity)}</td>
+                                                                                            {!groupEdit && [REFERENCIAS, ACTUALIZACAO].includes(selectedStage) &&
+                                                                                                <>
+                                                                                                    {selectedStage === REFERENCIAS &&
+                                                                                                        <>
+                                                                                                            <td colSpan="3"
+                                                                                                                className="bg-yellow-400 text-center">Referencias
+                                                                                                                Feitas
+                                                                                                            </td>
+                                                                                                            <td colSpan="3"
+                                                                                                                className="bg-green-400 text-center">Contra
+                                                                                                                Referencias
+                                                                                                            </td>
+                                                                                                        </>
+                                                                                                    }
+                                                                                                </>
+                                                                                            }
+                                                                                            {![REFERENCIAS, ACTUALIZACAO].includes(selectedStage) && !groupEdit && configuredStages[selectedStage] && dates.map((date, idx) => {
                                                                                                 if (!columnDisplay) {
                                                                                                     return <>
                                                                                                         <td key={idx}
@@ -1003,6 +1075,14 @@ export const Main = () => {
                                                                                                 }
                                                                                             })}
                                                                                         </tr>
+                                                                                        {!groupEdit && selectedStage === REFERENCIAS &&
+                                                                                            <ReferenciasComponent
+                                                                                                dates={dates}
+                                                                                                entity={entity}
+                                                                                                dataElementValue={dataElementValue}
+                                                                                                dataElements={dataElements}
+                                                                                                valueChange={createOrUpdateEvent}/>
+                                                                                        }
                                                                                     </>
                                                                                 })}
                                                                                 </tbody>
