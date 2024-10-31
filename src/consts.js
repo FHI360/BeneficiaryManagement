@@ -26,7 +26,8 @@ export const footerText = `Copyright © FHI360 | EpiC | Business Solutions | 202
 export const project_description = 'This application resolves duplicate issues'
 export const panelAction = 'Finding duplicate tracked entities'
 
-
+export const REFERENCIAS = 'ItVYsNfJZEX';
+export const ACTUALIZACAO = 'xZVwawMNs1d';
 export const REFERENCIAS_OPTIONS = [
     {
         label: 'ATS',

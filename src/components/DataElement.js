@@ -3,7 +3,7 @@ import { CalendarInput } from '@dhis2/ui';
 import PropTypes from 'prop-types';
 import React, { useEffect, useMemo, useState } from 'react';
 
-export const DataElementComponent = ({ dataElement, labelVisible = true, label, value, valueChanged, readonly, optionAdd = true }) => {
+export const DataElementComponent = ({ dataElement, labelVisible = true, label, value, valueChanged, readonly, optionAdd = true, selectedStage='' }) => {
     const engine = useDataEngine();
 
     const [id, setId] = useState('');

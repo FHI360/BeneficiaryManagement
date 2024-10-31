@@ -4,7 +4,7 @@ import { CalendarInput, Modal, ModalActions, ModalContent, ModalTitle, Paginatio
 import classnames from 'classnames';
 import classes from '../../App.module.css'
 import React, { useContext, useEffect, useState } from 'react';
-import { config, REFERENCIAS_OPTIONS } from '../../consts.js';
+import { config, REFERENCIAS_OPTIONS, REFERENCIAS, ACTUALIZACAO } from '../../consts.js';
 import { provisionOUs, SharedStateContext } from '../../utils.js';
 import { DataElementComponent } from '../DataElement.js';
 import { Navigation } from '../Navigation.js';
@@ -14,8 +14,6 @@ import ProgramStageComponent from '../ProgramStageComponent.js';
 import { ReferenciasComponent } from '../ReferenciasComponent.js';
 import { SpinnerComponent } from '../SpinnerComponent.js';
 
-const REFERENCIAS = 'ItVYsNfJZEX';
-const ACTUALIZACAO = 'xZVwawMNs1d';
 
 export const Main = () => {
     const engine = useDataEngine();
@@ -37,7 +35,7 @@ export const Main = () => {
     const [selectedStage, setSelectedStage] = useState(selectedSharedStage);
     const [dataElements, setDataElements] = useState([]);
     const [orgUnit, setOrgUnit] = useState(selectedSharedOrgUnit);
-    const [events, setEvents] = useState([]);
+    const [events, setEvents] = useState([]); // All events
     const [dates, setDates] = useState([new Date()]);
     const [startDate, setStateDate] = useState(new Date());
     const [endDate, setEndDate] = useState(null);
@@ -67,6 +65,8 @@ export const Main = () => {
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [configuredCondition, setSelectedConfiguredCondition] = useState([]); 
+
 
     const {show} = useAlert(
         ({msg}) => msg,
@@ -174,6 +174,7 @@ export const Main = () => {
                 setEndDateVisible(entry.value.endDateVisible);
                 setColumnDisplay(entry.value.columnDisplay);
                 setGroupEdit(entry.value.groupEdit);
+                setSelectedConfiguredCondition(entry.value.configuredCondition || []);
             }
         }
     }, [dataStore, selectedProgram]);
@@ -474,6 +475,7 @@ export const Main = () => {
                     }
                 }
 
+                // event => For line record
                 values.forEach(value => {
                     if (value.dataElement) {
                         const dataValue = event.dataValues.find(dv => dv.dataElement === value.dataElement.id) || {};
@@ -539,6 +541,23 @@ export const Main = () => {
         });
     }
 
+    const checkForCondition = (entity, date, dataElement, value)=> {
+        // createOrUpdateEvent(entity, date, dataElement, value)
+        console.log('configuredCondition: ',configuredCondition)
+        const equals = configuredCondition?.filter(condition => condition.operator === 'equals' )
+        console.log(equals)
+
+        if (equals){
+            if (equals.length > 0)                
+                {
+                    console.log('equals: ',equals)
+                    
+                }
+        }
+        console.log('configuredStages: ', configuredStages)
+        console.log('dataElements: ', dataElements)
+        // createOrUpdateEvent(entity, date, dataElement, value)
+    }
     // eslint-disable-next-line max-params
     const createOrUpdateEvent = (entity, date, dataElement, value) => {
         console.log('Update', entity, date, dataElement, value)
@@ -606,6 +625,7 @@ export const Main = () => {
                 setOriginalEdits([..._originalEdits, Object.assign({}, originalEdit, {values: oldValues})]);
             }
         }
+        console.log("_edits: ", _edits)
 
         setEdits(_edits);
     }
@@ -655,6 +675,7 @@ export const Main = () => {
     const referenciasRows = () => {
         return REFERENCIAS_OPTIONS.filter(o => o.active).length + 1;
     }
+
 
     return (
         <>
@@ -830,7 +851,8 @@ export const Main = () => {
                                                                                                 value={groupDataElementValue(cde)}
                                                                                                 dataElement={de}
                                                                                                 labelVisible={true}
-                                                                                                valueChanged={createOrUpdateGroupValue}/>
+                                                                                                valueChanged={createOrUpdateGroupValue}
+                                                                                                selectedStage={selectedStage}/>
                                                                                         }
                                                                                     </>
                                                                                 })}
@@ -1043,7 +1065,8 @@ export const Main = () => {
                                                                                                                                     value={dataElementValue(date, de.id, entity)}
                                                                                                                                     dataElement={de}
                                                                                                                                     labelVisible={true}
-                                                                                                                                    valueChanged={(d, v) => createOrUpdateEvent(entity, date, de, v)}/>
+                                                                                                                                    valueChanged={(d, v) => createOrUpdateEvent(entity, date, de, v)}
+                                                                                                                                    selectedStage={selectedStage}/>
                                                                                                                             }
                                                                                                                         </>
                                                                                                                     })}
@@ -1065,7 +1088,11 @@ export const Main = () => {
                                                                                                                                 value={dataElementValue(date, de.id, entity)}
                                                                                                                                 dataElement={de}
                                                                                                                                 labelVisible={false}
-                                                                                                                                valueChanged={(d, v) => createOrUpdateEvent(entity, date, de, v)}/>
+                                                                                                                                valueChanged={(dataElement, value) => {
+                                                                                                                                    checkForCondition(entity, date, dataElement, value)
+                                                                                                                                   // createOrUpdateEvent(entity, date, dataElement, value)
+                                                                                                                                }}
+                                                                                                                                selectedStage={selectedStage}/>
                                                                                                                         </div>
                                                                                                                     }
                                                                                                                 </td>
