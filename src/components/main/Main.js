@@ -4,16 +4,17 @@ import { CalendarInput, Modal, ModalActions, ModalContent, ModalTitle, Paginatio
 import classnames from 'classnames';
 import classes from '../../App.module.css'
 import React, { useContext, useEffect, useState } from 'react';
-import { config, REFERENCIAS_OPTIONS, REFERENCIAS, ACTUALIZACAO } from '../../consts.js';
-import { provisionOUs, SharedStateContext } from '../../utils.js';
+import { ACTUALIZACAO, ACTUALIZACAO_OPTIONS, config, REFERENCIAS, REFERENCIAS_OPTIONS } from '../../consts.js';
+import { formatDate, getParticipant, searchEntities, SharedStateContext } from '../../utils.js';
+import { ActualizacaoComponent } from '../ActualizacaoComponent.js';
 import { DataElementComponent } from '../DataElement.js';
 import { Navigation } from '../Navigation.js';
 import OrganisationUnitComponent from '../OrganisationUnitComponent.js';
 import ProgramComponent from '../ProgramComponent.js';
 import ProgramStageComponent from '../ProgramStageComponent.js';
 import { ReferenciasComponent } from '../ReferenciasComponent.js';
+import { SearchComponent } from '../SearchComponent.js';
 import { SpinnerComponent } from '../SpinnerComponent.js';
-
 
 export const Main = () => {
     const engine = useDataEngine();
@@ -30,16 +31,13 @@ export const Main = () => {
         setSelectedSharedStage
     } = sharedState;
 
-    const [selectedOUForQuery, setSelectedOUForQuery] = useState(false);
     const [selectedProgram, setSelectedProgram] = useState(selectedSharedProgram);
     const [selectedStage, setSelectedStage] = useState(selectedSharedStage);
     const [dataElements, setDataElements] = useState([]);
     const [orgUnit, setOrgUnit] = useState(selectedSharedOrgUnit);
-    const [events, setEvents] = useState([]); // All events
     const [dates, setDates] = useState([new Date()]);
     const [startDate, setStateDate] = useState(new Date());
     const [endDate, setEndDate] = useState(null);
-    const [dateEntities, setDateEntities] = useState({});
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(50);
     const [entities, setEntities] = useState([]);
@@ -90,23 +88,6 @@ export const Main = () => {
         }
     }
 
-    const eventQuery = {
-        events: {
-            resource: 'tracker/events',
-            params: ({program, programStage, start, end}) => {
-                start.setUTCHours(0, 0, 0, 0);
-                end.setUTCHours(23, 59, 59, 999);
-                return ({
-                    program: program,
-                    programStage: programStage,
-                    occurredAfter: start,
-                    occurredBefore: end,
-                    fields: ['id', 'displayName', 'occurredAt', 'dataElement(id, name)'],
-                })
-            }
-        }
-    }
-
     const dataElementsQuery = {
         programStage: {
             resource: `programStages`,
@@ -133,15 +114,6 @@ export const Main = () => {
             }
         }
     }
-
-    const {data: dataEvent} = useDataQuery(eventQuery, {
-        variables: {
-            program: selectedProgram,
-            programStage: selectedProgram,
-            start: startDate,
-            end: endDate,
-        }
-    });
 
     const {
         data: elementsData,
@@ -180,23 +152,9 @@ export const Main = () => {
     }, [dataStore, selectedProgram]);
 
     useEffect(() => {
+        console.log('edits: ', edits)
+    }, [edits])
 
-        setSelectedOUForQuery(provisionOUs(selectedOU))
-
-    }, [selectedOU]);
-
-    useEffect(() => {
-        if (dataEvent && dataEvent.events) {
-            setEvents(dataEvent.events);
-            const dates = [];
-            dataEvent.events.forEach(event => {
-                dates.push(event.occurredAt);
-            });
-
-            setDates(dates);
-        }
-
-    }, [dataEvent, startDate, endDate, selectedStage, selectedProgram]);
 
     useEffect(() => {
         refetchDataElements({id: selectedStage});
@@ -273,7 +231,8 @@ export const Main = () => {
             configuredStages,
             endDateVisible,
             groupEdit,
-            columnDisplay
+            columnDisplay,
+            configuredCondition
         }
         value[type] = data;
         const mutation = {
@@ -345,36 +304,6 @@ export const Main = () => {
         }
     }
 
-    const datesBetween = (startDate, endDate) => {
-        if (endDate) {
-            const dates = [];
-            const currentDate = new Date(startDate);
-
-            while (currentDate <= endDate) {
-                dates.push(new Date(currentDate));
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-            return dates.length;
-        } else {
-            return 1;
-        }
-    }
-
-    const formatDate = (date) => {
-        if (!date) {
-            return null;
-        }
-        return new Intl.DateTimeFormat('en-GB', {
-            dateStyle: 'medium',
-        }).format(new Date(date));
-    }
-
-    const getParticipant = (entity) => {
-        return nameAttributes.map(attr => {
-            return entity.enrollments[0].attributes?.find(attribute => attribute.attribute === attr)?.value
-        }).join(' ')
-    }
-
     const groupDataElementValue = (dataElement) => {
         return groupValues[dataElement];
     }
@@ -401,33 +330,6 @@ export const Main = () => {
             return (editedEntity.values.find(value => value.dataElement.id === dataElement && formatDate(date) === formatDate(value.date))?.value ?? '') + '';
         }
         return null;
-    }
-
-    const selectDate = (date, checked) => {
-        const dates = dateEntities;
-        if (checked) {
-            dates[date] = entities.map(e => e.trackedEntity);
-        } else {
-            dates[date] = [];
-        }
-
-        setDateEntities(dates);
-    }
-
-    const dateChecked = (entity, date) => {
-        return dateEntities[date]?.includes(entity.trackedEntity)
-    }
-
-    const checkEntity = (entity, date, checked) => {
-        const dates = dateEntities;
-        let entities = dateEntities[date];
-        if (checked) {
-            entities.push(entity.trackedEntity);
-        } else {
-            entities = entities.filter(e => e.trackedEntity !== entity.trackedEntity);
-        }
-        dates[date] = entities;
-        setDateEntities(dates);
     }
 
     const saveEdits = () => {
@@ -550,17 +452,31 @@ export const Main = () => {
         if (equals){
             if (equals.length > 0)                
                 {
-                    console.log('equals: ',equals)
-                    
+                    const program_stage_rules = equals?.filter(condition => condition.selectedStage === selectedStage )
+                    const DataElement_in_view_rules = program_stage_rules?.filter(condition => condition.dataElement_one === dataElement.id )                    
+                    if (DataElement_in_view_rules.length > 0){
+
+                        DataElement_in_view_rules.forEach(rule => {
+                            const dataElement_two = rule.dataElement_two || ''
+                            const check_for_dataElement_two = dataElements?.find(item => item.id === dataElement_two )
+                            if (check_for_dataElement_two){
+                                const dataElement_two_data = dataElements?.find(item => item.id === dataElement_two )
+                                const equals_to_value = rule.equals_to.toLowerCase() === "true";
+                                if (equals_to_value === value)
+                                    {
+                                        console.log("equals_to_value: ", equals_to_value)
+                                        createOrUpdateEvent(entity, date, dataElement_two_data, rule.value_text)
+                                    } 
+                            }
+                        })
+                    }                    
                 }
         }
-        console.log('configuredStages: ', configuredStages)
-        console.log('dataElements: ', dataElements)
-        // createOrUpdateEvent(entity, date, dataElement, value)
+        createOrUpdateEvent(entity, date, dataElement, value)
     }
     // eslint-disable-next-line max-params
     const createOrUpdateEvent = (entity, date, dataElement, value) => {
-        console.log('Update', entity, date, dataElement, value)
+        console.log('processing: ', dataElement)
         if (dataElement.valueType.includes('INTEGER')) {
             value = parseInt(value);
             if (dataElement.valueType === 'INTEGER_ZERO_OR_POSITIVE' && parseInt(value) < 0) {
@@ -625,7 +541,7 @@ export const Main = () => {
                 setOriginalEdits([..._originalEdits, Object.assign({}, originalEdit, {values: oldValues})]);
             }
         }
-        console.log("_edits: ", _edits)
+        console.log('_edits: ', _edits)
 
         setEdits(_edits);
     }
@@ -676,6 +592,14 @@ export const Main = () => {
         return REFERENCIAS_OPTIONS.filter(o => o.active).length + 1;
     }
 
+    const search = (keyword) => {
+        if (keyword && keyword.length > 0) {
+            const entities = searchEntities(keyword, allEntities, nameAttributes);
+            setEntities(entities);
+        } else {
+            setEntities(allEntities);
+        }
+    }
 
     return (
         <>
@@ -704,31 +628,13 @@ export const Main = () => {
                                             }
                                         </div>
                                     </div>
-
-                                    {!orgUnit && 
-                                                                            <div className="mx-auto w-full">
-                                                                            <div className="w-full">
-                                                                                <div className="flex flex-col">
-                                                                                    <div className="flex flex-col gap-1 mb-2">
-                                                                                        <div
-                                                                                            className="flex flex-row w-full rounded-md bg-white p-3 gap-x-1">
-                                                                                                <div className={classes.programAttributeEmptyContainer}>
-                                                                                                    <span style={{ textAlign: 'center' }}> {i18n.t('Select an Organisation Unit')}</span>
-                                                                                                </div>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                    
-                                    }
                                     {orgUnit &&
                                         <div className="mx-auto w-full">
                                             <div className="w-full">
                                                 <div className="flex flex-col">
                                                     <div className="flex flex-col gap-1 mb-2">
                                                         <div
-                                                            className="flex flex-row w-full rounded-md bg-white p-3 gap-x-1">
+                                                            className="flex flex-row w-full card p-3 gap-x-1">
                                                             <div className="w-3/12">
                                                                 <ProgramComponent
                                                                     selectedProgram={selectedProgram}
@@ -759,7 +665,7 @@ export const Main = () => {
                                                         </div>
                                                     </div>
                                                     {Object.keys(filterAttributes).length > 0 &&
-                                                        <div className="rounded-md bg-white p-3 mb-2 w-full gap-x-1">
+                                                        <div className="card p-3 mb-2 w-full gap-x-1">
                                                             <label htmlFor="stage"
                                                                    className="block mb-2 text-sm font-medium text-gray-900 dark:text-white border-b-2 border-b-gray-800">
                                                                 {i18n.t('Entity Filter')}
@@ -785,7 +691,7 @@ export const Main = () => {
                                                     {selectedStage &&
                                                         <div className="flex flex-col w-full mb-2">
                                                             <div
-                                                                className="w-full rounded-md bg-white p-3 flex flex-row gap-x-1">
+                                                                className="w-full card p-3 flex flex-row gap-x-1">
                                                                 <div className="w-3/12 flex flex-col">
                                                                     <label
                                                                         className="text-left block mb-2 text-sm font-medium text-gray-900 dark:text-white">
@@ -814,6 +720,24 @@ export const Main = () => {
                                                                     </div>
                                                                 }
                                                             </div>
+                                                            {entities.length > 0 &&
+                                                                <div className="card p-2 pt-4">
+                                                                    <div
+                                                                        className="flex items-center">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={groupEdit === true}
+                                                                            onChange={(payload) => {
+                                                                                setGroupEdit(payload.target.checked);
+                                                                            }}
+                                                                            className="checkbox"/>
+                                                                        <label
+                                                                            className="pl-2 pt-2 label">
+                                                                            {i18n.t('Group Action?')}
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+                                                            }
                                                             {groupEdit && selectedStage && dataElements.length > 0 && configuredStages[selectedStage] && (configuredStages[selectedStage]['groupDataElements'] || []).length > 0 &&
                                                                 <div className="w-full flex flex-col pt-2">
                                                                     <div
@@ -841,7 +765,8 @@ export const Main = () => {
                                                                         }
                                                                         <div
                                                                             className="relative overflow-x-auto shadow-md sm:rounded-lg">
-                                                                            <div className={selectedStage === REFERENCIAS ? 'w-8/12 p-2' : 'w-3/12 p-2'}>
+                                                                            <div
+                                                                                className={selectedStage === REFERENCIAS ? 'w-8/12 p-2' : 'w-3/12 p-2'}>
                                                                                 {![REFERENCIAS, ACTUALIZACAO].includes(selectedStage) && dataElements.length > 0 && configuredStages[selectedStage] && (configuredStages[selectedStage]['groupDataElements'] || []).map((cde, idx) => {
                                                                                     const de = dataElements.find(de => de.id === cde);
                                                                                     return <>
@@ -887,12 +812,53 @@ export const Main = () => {
                                                                                         </tbody>
                                                                                     </table>
                                                                                 }
+                                                                                {selectedStage === ACTUALIZACAO &&
+                                                                                    <table className="">
+                                                                                        <thead
+                                                                                            className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                                                                        <tr>
+                                                                                            <th colSpan={ACTUALIZACAO_OPTIONS.current.length}
+                                                                                                className="text-center p-4">
+                                                                                                Seroestado
+                                                                                                inicial (Memento
+                                                                                                do
+                                                                                                Registo)
+                                                                                            </th>
+                                                                                        </tr>
+                                                                                        <tr>
+                                                                                            {ACTUALIZACAO_OPTIONS.current.map(c => {
+                                                                                                return <>
+                                                                                                    <th className="text-center h-48 align-bottom">
+                                                                                                        <div
+                                                                                                            className="flex justify-center items-end h-full">
+                                                                                                        <span
+                                                                                                            className="whitespace-nowrap block text-left -rotate-90 w-16 pb-10 pl-4">
+                                                                                                            {c.label}
+                                                                                                        </span>
+                                                                                                        </div>
+                                                                                                    </th>
+                                                                                                </>
+                                                                                            })
+                                                                                            }
+                                                                                        </tr>
+                                                                                        </thead>
+                                                                                        <tbody>
+                                                                                        <tr>
+                                                                                            <ActualizacaoComponent
+                                                                                                group={true}
+                                                                                                groupDataElementValue={groupDataElementValue}
+                                                                                                dataElements={dataElements}
+                                                                                                valueChange={(e, d, dataElement, value) => createOrUpdateGroupValue(dataElement, value)}/>
+                                                                                        </tr>
+                                                                                        </tbody>
+                                                                                    </table>
+                                                                                }
                                                                             </div>
                                                                         </div>
                                                                         {configuredStages[selectedStage] && (configuredStages[selectedStage]['groupDataElements'] || []).length > 0 &&
                                                                             <div className="flex flex-row justify-end">
                                                                                 <button type="button"
-                                                                                        className="mt-2 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+                                                                                        className="primary-btn"
                                                                                         onClick={() => setModalShow(true)}>Save
                                                                                     Event
                                                                                 </button>
@@ -910,6 +876,12 @@ export const Main = () => {
                                                                             {loading &&
                                                                                 <SpinnerComponent/>
                                                                             }
+                                                                            {entities.length > 0 &&
+                                                                                <div className="w-3/12">
+                                                                                    <SearchComponent
+                                                                                        search={(value) => search(value)}/>
+                                                                                </div>
+                                                                            }
                                                                             <table
                                                                                 className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                                                                                 <caption
@@ -920,11 +892,11 @@ export const Main = () => {
                                                                                     </p>
                                                                                     <div
                                                                                         className="flex flex-row justify-end">
-                                                                                        <button type="button"
-                                                                                                className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+                                                                                        {/*<button type="button"
+                                                                                                className="primary-btn"
                                                                                                 onClick={() => setConfirmShow(true)}>Reload
                                                                                             records
-                                                                                        </button>
+                                                                                        </button>*/}
                                                                                         {edits.length !== 0 || (selectedEntities.length > 0 && groupValues) &&
                                                                                             <button type="button"
                                                                                                     className={saving || loading ? 'primary-btn-disabled' : 'primary-btn'}
@@ -955,16 +927,18 @@ export const Main = () => {
                                                                                                         }
                                                                                                     }}
                                                                                                     checked={selectedEntities.length === entities.length}
-                                                                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
+                                                                                                    className="checkbox"/>
                                                                                             </div>
                                                                                         </th>
                                                                                     }
                                                                                     <th data-priority="1"
+                                                                                        rowSpan={!groupEdit && selectedStage === ACTUALIZACAO ? 2 : 1}
                                                                                         className="px-6 py-3 w-1/12 text-center">#
                                                                                     </th>
                                                                                     <th data-priority="2"
-                                                                                        className={groupEdit ? 'px-6 py-3 w-10/12' : (!configuredStages[selectedStage] || (configuredStages[selectedStage]['dataElements'] || []).length === 0) ? 'px-6 py-3 w-10/12 text-center' : 'px-6 py-3 w-3/12 text-center'}
-                                                                                        rowSpan={2}>Profile
+                                                                                        rowSpan={!groupEdit && selectedStage === ACTUALIZACAO ? 2 : 1}
+                                                                                        className={groupEdit ? 'text-left px-6 py-3 w-10/12' : (!configuredStages[selectedStage] || (configuredStages[selectedStage]['dataElements'] || []).length === 0) ? 'px-6 py-3 w-10/12 text-center' : 'px-6 py-3 w-3/12 text-center'}
+                                                                                    >Profile
                                                                                     </th>
                                                                                     {!groupEdit && [REFERENCIAS, ACTUALIZACAO].includes(selectedStage) &&
                                                                                         <>
@@ -977,6 +951,24 @@ export const Main = () => {
                                                                                                     </th>
                                                                                                 </>
                                                                                             }
+                                                                                            {selectedStage === ACTUALIZACAO &&
+                                                                                                <>
+                                                                                                    <th colSpan={2}
+                                                                                                        className="text-center p-4">
+                                                                                                        Seroestado
+                                                                                                        inicial (Memento
+                                                                                                        do
+                                                                                                        Registo)
+                                                                                                    </th>
+                                                                                                    <th colSpan={6}
+                                                                                                        className="text-center p-4">
+                                                                                                        Seroestado
+                                                                                                        inicial (Memento
+                                                                                                        do
+                                                                                                        Registo)
+                                                                                                    </th>
+                                                                                                </>
+                                                                                            }
                                                                                         </>
                                                                                     }
                                                                                     {![REFERENCIAS, ACTUALIZACAO].includes(selectedStage) && !groupEdit && configuredStages[selectedStage] && (configuredStages[selectedStage]['dataElements'] || []).map((id, idx) => {
@@ -985,12 +977,43 @@ export const Main = () => {
                                                                                                    rowSpan={5}
                                                                                                    style={{width: `${66.66 / ((configuredStages[selectedStage]['dataElements'] || []).length || 1)}px`}}
                                                                                                    className="px-4 py-3 h-72 border">
-                                                                                            <span
-                                                                                                className="whitespace-nowrap block text-left -rotate-90 w-16 pb-1">{de?.name}</span>
+                                                                                            <div
+                                                                                                className="flex justify-center items-end h-full">
+                                                                                                                <span
+                                                                                                                    className="whitespace-nowrap block text-left -rotate-90 w-16 pb-10 pl-2">
+                                                                                                                    {de?.name}
+                                                                                                                </span>
+                                                                                            </div>
                                                                                         </th>
                                                                                     })
                                                                                     }
                                                                                 </tr>
+                                                                                {selectedStage === ACTUALIZACAO && !groupEdit &&
+                                                                                    <tr>
+                                                                                        {ACTUALIZACAO_OPTIONS.initial.map(c => {
+                                                                                            return <>
+                                                                                                <th className={c.conhecido ? 'text-center bg-green-400' : 'text-center bg-red-400'}>
+                                                                                                    {c.label}
+                                                                                                </th>
+                                                                                            </>
+                                                                                        })
+                                                                                        }
+                                                                                        {ACTUALIZACAO_OPTIONS.current.map(c => {
+                                                                                            return <>
+                                                                                                <th className="text-center h-48 align-bottom">
+                                                                                                    <div
+                                                                                                        className="flex justify-center items-end h-full">
+                                                                                                        <span
+                                                                                                            className="whitespace-nowrap block text-left -rotate-90 w-16 pb-10 pl-2">
+                                                                                                            {c.label}
+                                                                                                        </span>
+                                                                                                    </div>
+                                                                                                </th>
+                                                                                            </>
+                                                                                        })
+                                                                                        }
+                                                                                    </tr>
+                                                                                }
                                                                                 </thead>
                                                                                 <tbody>
                                                                                 {entities.map((entity, index) => {
@@ -1024,13 +1047,13 @@ export const Main = () => {
                                                                                                                     }
                                                                                                                 }
                                                                                                             }}
-                                                                                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
+                                                                                                            className="checkbox"/>
                                                                                                     </div>
                                                                                                 </td>
                                                                                             }
                                                                                             <td rowSpan={!groupEdit && selectedStage === REFERENCIAS ? referenciasRows() : 1}>{index + 1}</td>
                                                                                             <td rowSpan={!groupEdit && selectedStage === REFERENCIAS ? referenciasRows() : 1}
-                                                                                                className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{getParticipant(entity)}</td>
+                                                                                                className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{getParticipant(entity, nameAttributes)}</td>
                                                                                             {!groupEdit && [REFERENCIAS, ACTUALIZACAO].includes(selectedStage) &&
                                                                                                 <>
                                                                                                     {selectedStage === REFERENCIAS &&
@@ -1047,57 +1070,63 @@ export const Main = () => {
                                                                                                     }
                                                                                                 </>
                                                                                             }
-                                                                                            {![REFERENCIAS, ACTUALIZACAO].includes(selectedStage) && !groupEdit && configuredStages[selectedStage] && dates.map((date, idx) => {
-                                                                                                if (!columnDisplay) {
-                                                                                                    return <>
-                                                                                                        <td key={idx}
-                                                                                                            className="px-6 py-4">
-                                                                                                            <div
-                                                                                                                className="flex flex-row">
+                                                                                            {![REFERENCIAS].includes(selectedStage) && !groupEdit && configuredStages[selectedStage] && dates.map((date, idx) => {
+                                                                                                if (selectedStage !== ACTUALIZACAO) {
+                                                                                                    if (!columnDisplay) {
+                                                                                                        return <>
+                                                                                                            <td key={idx}
+                                                                                                                className="px-6 py-4">
                                                                                                                 <div
-                                                                                                                    className="flex flex-col gap-1">
-                                                                                                                    {(dataElements.length > 0 && configuredStages[selectedStage]['dataElements'] || []).map((cde, idx) => {
-                                                                                                                        const de = dataElements.find(de => de.id === cde);
-                                                                                                                        return <>
-                                                                                                                            {de &&
+                                                                                                                    className="flex flex-row">
+                                                                                                                    <div
+                                                                                                                        className="flex flex-col gap-1">
+                                                                                                                        {(dataElements.length > 0 && configuredStages[selectedStage]['dataElements'] || []).map((cde, idx) => {
+                                                                                                                            const de = dataElements.find(de => de.id === cde);
+                                                                                                                            return <>
+                                                                                                                                {de &&
+                                                                                                                                    <DataElementComponent
+                                                                                                                                        key={idx}
+                                                                                                                                        value={dataElementValue(date, de.id, entity)}
+                                                                                                                                        dataElement={de}
+                                                                                                                                        labelVisible={true}
+                                                                                                                                        valueChanged={(dataElement, value) => createOrUpdateEvent(entity, date, de, value)}/>
+                                                                                                                                }
+                                                                                                                            </>
+                                                                                                                        })}
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            </td>
+                                                                                                        </>
+                                                                                                    } else {
+                                                                                                        return <>
+                                                                                                            {(configuredStages[selectedStage]['dataElements'] || []).map((id, idx2) => {
+                                                                                                                const de = dataElements.find(de => de.id === id);
+                                                                                                                return <>
+                                                                                                                    <td className="border">
+                                                                                                                        {de &&
+                                                                                                                            <div
+                                                                                                                                className="pl-2">
                                                                                                                                 <DataElementComponent
-                                                                                                                                    key={idx}
+                                                                                                                                    key={idx2}
                                                                                                                                     value={dataElementValue(date, de.id, entity)}
                                                                                                                                     dataElement={de}
-                                                                                                                                    labelVisible={true}
-                                                                                                                                    valueChanged={(d, v) => createOrUpdateEvent(entity, date, de, v)}
-                                                                                                                                    selectedStage={selectedStage}/>
-                                                                                                                            }
-                                                                                                                        </>
-                                                                                                                    })}
-                                                                                                                </div>
-                                                                                                            </div>
-                                                                                                        </td>
-                                                                                                    </>
+                                                                                                                                    labelVisible={false}
+                                                                                                                                    valueChanged={(dataElement, value) => checkForCondition(entity, date, de, value)}/>
+                                                                                                                            </div>
+                                                                                                                        }
+                                                                                                                    </td>
+                                                                                                                </>
+                                                                                                            })}
+                                                                                                        </>
+                                                                                                    }
                                                                                                 } else {
                                                                                                     return <>
-                                                                                                        {(configuredStages[selectedStage]['dataElements'] || []).map((id, idx2) => {
-                                                                                                            const de = dataElements.find(de => de.id === id);
-                                                                                                            return <>
-                                                                                                                <td className="border">
-                                                                                                                    {de &&
-                                                                                                                        <div
-                                                                                                                            className="pl-2">
-                                                                                                                            <DataElementComponent
-                                                                                                                                key={idx2}
-                                                                                                                                value={dataElementValue(date, de.id, entity)}
-                                                                                                                                dataElement={de}
-                                                                                                                                labelVisible={false}
-                                                                                                                                valueChanged={(dataElement, value) => {
-                                                                                                                                    checkForCondition(entity, date, dataElement, value)
-                                                                                                                                   // createOrUpdateEvent(entity, date, dataElement, value)
-                                                                                                                                }}
-                                                                                                                                selectedStage={selectedStage}/>
-                                                                                                                        </div>
-                                                                                                                    }
-                                                                                                                </td>
-                                                                                                            </>
-                                                                                                        })}
+                                                                                                        <ActualizacaoComponent
+                                                                                                            dates={dates}
+                                                                                                            entity={entity}
+                                                                                                            dataElementValue={dataElementValue}
+                                                                                                            dataElements={dataElements}
+                                                                                                            valueChange={createOrUpdateEvent}/>
                                                                                                     </>
                                                                                                 }
                                                                                             })}
