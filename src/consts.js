@@ -26,7 +26,8 @@ export const footerText = `Copyright © FHI360 | EpiC | Business Solutions | 202
 export const project_description = 'This application resolves duplicate issues'
 export const panelAction = 'Finding duplicate tracked entities'
 
-
+export const REFERENCIAS = 'ItVYsNfJZEX';
+export const ACTUALIZACAO = 'xZVwawMNs1d';
 export const REFERENCIAS_OPTIONS = [
     {
         label: 'ATS',
@@ -127,3 +128,46 @@ export const REFERENCIAS_OPTIONS = [
         }
     }
 ]
+export const ACTUALIZACAO_OPTIONS = {
+    situacaoRevelada: 'cIMEoHsWlpu',
+    conhecido: 'myFHYEi85cK',
+    naoConhecido: 'LUS6HlEvj0l',
+    initial: [
+        {
+            label: 'HIV Conhecido',
+            id: 'a1v5Zt8if4o',
+            conhecido: true
+        },
+        {
+            label: 'HIV nao Conhecido',
+            id: 'MDegNzGK2HT',
+            conhecido: false
+        }
+    ],
+    current: [
+        {
+            label: 'Conhecido nao revelado',
+            id: 'LuJHiibgS17'
+        },
+        {
+            label: 'Teste nao recomendado',
+            id: 'psVKljcvJDD'
+        },
+        {
+            label: 'Nao conhece',
+            id: 'K3dvTNEltRg'
+        },
+        {
+            label: 'HIV Negativo',
+            id: 'XYWKEL5bhpv'
+        },
+        {
+            label: 'HIV+ nao em TARV',
+            id: 'np3w5uhGzs9'
+        },
+        {
+            label: 'HIV+ em TARV',
+            id: 'zcnXDfAuINN'
+        }
+    ]
+}
