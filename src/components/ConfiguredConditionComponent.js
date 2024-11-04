@@ -54,7 +54,6 @@ const ConfigureCondition = ({
 
 
     useEffect(() => {
-        console.log('configuredCondition: ', configuredCondition)
 
     }, [configuredCondition])
     useEffect(() => {
@@ -64,7 +63,6 @@ const ConfigureCondition = ({
         if (conditionExists_ === true) {
             setSelectedConfiguredCondition(prevSelected => [...prevSelected, condition_])
             setSaveCondition(false)
-            console.log("Condition Created");
 
             show({msg: `Condition Created Successfully.`, type: 'success'})
 
@@ -75,7 +73,6 @@ const ConfigureCondition = ({
 
     useEffect(() => {
         if (saveCondition) {
-            console.log('saveCondition: ', saveCondition)
             if (selectedOperator === 'between') {
                 if (selectedVariable1.length > 0 &&
                     selectedVariable2.length > 0 &&
