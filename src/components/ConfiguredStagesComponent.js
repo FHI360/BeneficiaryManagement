@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import React from 'react';
 
 export const ConfiguredStagesComponent = ({stages, configuredStages, onEdit, onSort, single}) => {
-    console.log('configuredStages', configuredStages)
+
     return (
         <>
             {Object.keys(configuredStages).map((stage) => {

@@ -12,6 +12,14 @@ export const ActualizacaoComponent = ({
                                           dataElementValue,
                                           valueChange
                                       }) => {
+
+    const initialValue = (entity, item) => {
+        const attributes = entity.enrollments?.[0]?.attributes || entity.attributes;
+        return item.conhecido
+            ? attributes?.find(attribute => attribute.attribute === ACTUALIZACAO_OPTIONS.conhecido)?.value
+            : attributes?.find(attribute => attribute.attribute === ACTUALIZACAO_OPTIONS.naoConhecido)?.value;
+    }
+
     return (
         <>
             {/* Render initial options */}
@@ -21,10 +29,7 @@ export const ActualizacaoComponent = ({
                         .sort((a, b) => (a.conhecido && !b.conhecido ? -1 : !a.conhecido && b.conhecido ? 1 : 0))
                         .map((i, index) => {
                             const de = dataElements.find(de => de.id === i.id);
-                            const attributes = entity.enrollments?.[0]?.attributes || entity.attributes;
-                            const value = i.conhecido
-                                ? attributes?.find(attribute => attribute.attribute === ACTUALIZACAO_OPTIONS.conhecido)?.value
-                                : attributes?.find(attribute => attribute.attribute === ACTUALIZACAO_OPTIONS.naoConhecido)?.value;
+                            const value = initialValue(entity, i);
 
                             return (
                                 de && (
@@ -57,7 +62,19 @@ export const ActualizacaoComponent = ({
                                             value={group ? groupDataElementValue(de.id) : dataElementValue(date, de.id, entity)}
                                             dataElement={de}
                                             labelVisible={false}
-                                            valueChanged={(d, v) => valueChange(entity, date, de, v)}
+                                            valueChanged={(d, v) => {
+                                                ACTUALIZACAO_OPTIONS.initial
+                                                    .map((i) => {
+                                                        const dataElement = dataElements.find(de => de.id === i.id);
+                                                        const value = initialValue(entity, i);
+                                                        if (!group && value) {
+                                                            valueChange(entity, date, dataElement, value);
+                                                        }
+                                                    })
+
+                                                valueChange(entity, date, de, v);
+                                            }
+                                            }
                                         />
                                     </div>
                                 </td>
@@ -68,7 +85,7 @@ export const ActualizacaoComponent = ({
             ))}
         </>
     );
-}
+};
 
 ActualizacaoComponent.propTypes = {
     dataElements: PropTypes.array.isRequired,

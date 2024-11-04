@@ -4,7 +4,14 @@ import { CalendarInput, Modal, ModalActions, ModalContent, ModalTitle, Paginatio
 import classnames from 'classnames';
 import React, { useContext, useEffect, useState } from 'react';
 import { ACTUALIZACAO, ACTUALIZACAO_OPTIONS, config, REFERENCIAS, REFERENCIAS_OPTIONS } from '../../consts.js';
-import { formatDate, getParticipant, searchEntities, SharedStateContext } from '../../utils.js';
+import {
+    formatDate,
+    getParticipant,
+    isObjectEmpty,
+    searchEntities,
+    SharedStateContext,
+    sortEntities
+} from '../../utils.js';
 import { ActualizacaoComponent } from '../ActualizacaoComponent.js';
 import { DataElementComponent } from '../DataElement.js';
 import { Navigation } from '../Navigation.js';
@@ -62,6 +69,7 @@ export const Main = () => {
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [toggle, setToggle] = useState(false);
 
     const {show} = useAlert(
         ({msg}) => msg,
@@ -170,20 +178,21 @@ export const Main = () => {
                 }
             }).then(res => {
                 if (res && res.entities) {
-                    setAllEntities(res.entities.instances);
+                    const entities = sortEntities(res.entities.instances, nameAttributes)
+                    setAllEntities(entities);
                     setTotal(res.entities.total);
 
                     if (filterValue && Object.keys(filterValue).length) {
                         Object.keys(filterValue).forEach(key => {
-                            const entities = res.entities.instances.filter(entity => {
+                            const filteredEntities = entities.filter(entity => {
                                 const attribute = entity.attributes.find(attr => attr.attribute === key);
                                 return attribute && attribute.value + '' === filterValue[key] + '';
                             });
 
-                            setEntities(entities);
+                            setEntities(filteredEntities);
                         })
                     } else {
-                        setEntities(res.entities.instances);
+                        setEntities(entities);
                     }
                     setLoading(false);
                 } else {
@@ -192,7 +201,7 @@ export const Main = () => {
                 }
             });
         }
-    }, [orgUnit, selectedProgram, page, pageSize]);
+    }, [orgUnit, selectedProgram, page, pageSize, toggle]);
 
     useEffect(() => {
         attributesRefetch({program: selectedProgram})
@@ -385,7 +394,7 @@ export const Main = () => {
                     }
                 });
 
-                (configuredStages[selectedStage] && configuredStages[selectedStage]['groupDataElements'] || []).map(de => {
+                (groupEdit && configuredStages[selectedStage] && configuredStages[selectedStage]['groupDataElements'] || []).map(de => {
                     return {
                         dataElement: de,
                         value: groupDataElementValue(de)
@@ -424,7 +433,8 @@ export const Main = () => {
             if (response.status === 'OK') {
                 setEdits([]);
                 setSaving(false);
-                setPage(1);
+                setPage( 1);
+                setToggle((prev) => !prev);
                 show({msg: i18n.t('Data successfully updated'), type: 'success'});
             } else {
                 show({msg: i18n.t('There was an error updating records'), type: 'error'});
@@ -434,73 +444,65 @@ export const Main = () => {
 
     // eslint-disable-next-line max-params
     const createOrUpdateEvent = (entity, date, dataElement, value) => {
+        console.log('Change', entity, date, dataElement, value);
+
+        // Validate integer constraints
         if (dataElement.valueType.includes('INTEGER')) {
             value = parseInt(value);
-            if (dataElement.valueType === 'INTEGER_ZERO_OR_POSITIVE' && parseInt(value) < 0) {
+            if (dataElement.valueType === 'INTEGER_ZERO_OR_POSITIVE' && value < 0) {
                 alert('Please enter a non-negative integer');
                 return;
             }
-            if (dataElement.valueType === 'INTEGER_POSITIVE' && parseInt(value) <= 0) {
+            if (dataElement.valueType === 'INTEGER_POSITIVE' && value <= 0) {
                 alert('Please enter a number greater than 0');
                 return;
             }
-            if (dataElement.valueType === 'INTEGER_NEGATIVE' && parseInt(value) >= 0) {
+            if (dataElement.valueType === 'INTEGER_NEGATIVE' && value >= 0) {
                 alert('Please enter a number less than 0');
                 return;
             }
         }
-        const _edits = edits.filter(edit => edit.entity.trackedEntity !== entity.trackedEntity);
-        let currentEdit = edits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
-        const originalEdit = originalEdits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
-        if (!currentEdit) {
-            currentEdit = {
-                entity,
-                values: []
-            };
-        }
-        const values = currentEdit.values.filter(v => !(v.dataElement.id === dataElement.id && formatDate(date) === formatDate(v.date)));
-        values.push({
-            value,
-            dataElement,
-            date
-        });
-        currentEdit.values = values;
 
-        const values2 = [...values];
-        const values1 = [...(Object.assign({}, originalEdits.find(edit => edit.entity.trackedEntity === entity.trackedEntity))?.values ?? [])];
-        const editChanged = () => {
-            if (values2.length !== values1.length) {
-                return true;
+        setEdits((prevEdits) => {
+            const _edits = [...prevEdits];
+            let currentEdit = _edits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
+            const originalEdit = originalEdits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
+
+            // Initialize currentEdit if it doesn't exist
+            if (!currentEdit) {
+                currentEdit = { entity, values: [] };
+                _edits.push(currentEdit);
             }
-            return values1.some(value => {
-                const match = values2.find(v => v.dataElement.id === value.dataElement.id && formatDate(v.date) === formatDate(value.date));
-                if (!match) {
-                    return true;
-                }
-                if (value.dataElement.valueType === 'TRUE_ONLY' || value.dataElement.valueType === 'BOOLEAN') {
-                    return !match.value !== !value.value;
-                }
-                return ((match.value ?? '') + '') !== ((value.value ?? '') + '');
 
-            })
-        }
+            // Filter out the specific `dataValue` for the same `dataElement` and `date`, then add the new `dataValue`
+            const newValue = { value, dataElement, date };
+            currentEdit.values = [
+                ...currentEdit.values.filter(v => !(v.dataElement.id === dataElement.id && formatDate(v.date) === formatDate(date))),
+                newValue
+            ];
 
-        if (originalEdit?.entity.trackedEntity !== currentEdit.entity.trackedEntity || editChanged()) {
-            _edits.push(currentEdit);
+            // Check if currentEdit matches the originalEdit for redo functionality
+            const isRevertedToOriginal = originalEdit && originalEdit.values.length === currentEdit.values.length
+                && originalEdit.values.every(ov => currentEdit.values.some(
+                    cv => cv.dataElement.id === ov.dataElement.id &&
+                        formatDate(cv.date) === formatDate(ov.date) &&
+                        cv.value === ov.value
+                ));
 
+
+            // If the entity's state has reverted to its original values, remove it from _edits
+            const finalEdits = isRevertedToOriginal
+                ? _edits.filter(edit => edit.entity.trackedEntity !== entity.trackedEntity)
+                : _edits;
+
+            // Add a new original edit if this is the first edit for the entity
             if (!originalEdit) {
-                setOriginalEdits([...originalEdits, {...currentEdit}]);
-            } else {
-                const _originalEdits = originalEdits.filter(edit => edit.entity.trackedEntity !== entity.trackedEntity);
-                const oldValues = {...originalEdit}.values.filter(v => v.dataElement.id === dataElement.id && formatDate(v.date) === formatDate(date));
-                const newValues = currentEdit.values.filter(v => !(v.dataElement.id === dataElement.id && formatDate(v.date) === formatDate(date)));
-                oldValues.push(...newValues);
-                setOriginalEdits([..._originalEdits, Object.assign({}, originalEdit, {values: oldValues})]);
+                setOriginalEdits(prevOriginalEdits => [...prevOriginalEdits, { ...currentEdit }]);
             }
-        }
 
-        setEdits(_edits);
-    }
+            return finalEdits;
+        });
+    };
 
     const createOrUpdateGroupValue = (dataElement, value) => {
         setGroupValues(prevValues => ({
@@ -831,12 +833,28 @@ export const Main = () => {
                                                                             {loading &&
                                                                                 <SpinnerComponent/>
                                                                             }
-                                                                            {entities.length > 0 &&
-                                                                                <div className="w-3/12">
-                                                                                    <SearchComponent
-                                                                                        search={(value) => search(value)}/>
-                                                                                </div>
-                                                                            }
+                                                                            <div className="flex-row flex">
+                                                                                {allEntities.length > 0 &&
+                                                                                    <div className="w-3/12">
+                                                                                        <SearchComponent
+                                                                                            search={(value) => search(value)}/>
+                                                                                    </div>
+                                                                                }
+                                                                                {((groupEdit && !isObjectEmpty(groupValues) && selectedEntities.length > 0) || (!groupEdit && edits.length > 0)) &&
+                                                                                    <div
+                                                                                        className="w-9/12 flex flex-row justify-end">
+                                                                                        <button type="button"
+                                                                                                className={saving || loading ? 'primary-btn-disabled' : 'primary-btn'}
+                                                                                                onClick={saveEdits}>
+                                                                                            {(saving || loading) &&
+                                                                                                <SpinnerComponent/>
+                                                                                            }
+                                                                                            Save Records
+                                                                                        </button>
+                                                                                    </div>
+                                                                                }
+                                                                            </div>
+
                                                                             <table
                                                                                 className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                                                                                 <caption
@@ -845,24 +863,6 @@ export const Main = () => {
                                                                                     <p className="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
 
                                                                                     </p>
-                                                                                    <div
-                                                                                        className="flex flex-row justify-end">
-                                                                                        {/*<button type="button"
-                                                                                                className="primary-btn"
-                                                                                                onClick={() => setConfirmShow(true)}>Reload
-                                                                                            records
-                                                                                        </button>*/}
-                                                                                        {edits.length !== 0 || (selectedEntities.length > 0 && groupValues) &&
-                                                                                            <button type="button"
-                                                                                                    className={saving || loading ? 'primary-btn-disabled' : 'primary-btn'}
-                                                                                                    onClick={saveEdits}>
-                                                                                                {(saving || loading) &&
-                                                                                                    <SpinnerComponent/>
-                                                                                                }
-                                                                                                Save Records
-                                                                                            </button>
-                                                                                        }
-                                                                                    </div>
                                                                                 </caption>
                                                                                 <thead
                                                                                     className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">

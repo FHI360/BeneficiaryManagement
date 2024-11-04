@@ -464,8 +464,12 @@ const ConfigurationComponent = () => {
                                                 // Reset states after saving
                                                 setEditing(false);
                                                 setConfigure1(true);
-                                                setSelectedStage('');
                                             }}
+                                            onCancel={() => {
+                                                setEditing(false);
+                                                setConfigure1(false);
+                                            }}
+                                            stages={stages}
                                         />
                                     </div>
                                 }
@@ -489,6 +493,8 @@ const ConfigurationComponent = () => {
 
                                                 dataStoreOperation('configuredStages', stages);
                                             }}
+                                            selectedStage={selectedStage}
+                                            stages={stages}
                                         />
                                     </div>
                                 }
@@ -602,6 +608,11 @@ const ConfigurationComponent = () => {
                                                     setEditing1(false);
                                                     setConfigure2(true)
                                                 }}
+                                                onCancel={() => {
+                                                    setEditing1(false);
+                                                    setConfigure2(false)
+                                                }}
+                                                stages={stages}
                                             />
                                         </div>
                                     }
@@ -625,6 +636,8 @@ const ConfigurationComponent = () => {
 
                                                     dataStoreOperation('configuredStages', stages);
                                                 }}
+                                                stages={stages}
+                                                selectedStage={selectedStage}
                                             />
                                         </div>
                                     }

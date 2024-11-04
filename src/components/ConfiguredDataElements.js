@@ -1,7 +1,8 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 
-export const ConfiguredDataElements =({caption, checkDataElements, dataElements, configuredStages, selectedStage, onDelete, onSave, onSelect, onSelectAll})=> {
+export const ConfiguredDataElements =({stages, caption, checkDataElements, dataElements, configuredStages, selectedStage, onDelete, onSave, onSelect, onSelectAll, onCancel})=> {
+
     return (
         <>
             <div className="p-8 mt-6 lg:mt-0 rounded shadow bg-white">
@@ -11,7 +12,7 @@ export const ConfiguredDataElements =({caption, checkDataElements, dataElements,
                         className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                         <caption
                             className="p-5 text-lg font-semibold text-left rtl:text-right text-gray-900 bg-white dark:text-white dark:bg-gray-800">
-                            Data Elements
+                            {stages.find(stage => stage.id === selectedStage)?.displayName}
                             <p className="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
                                 {caption}
                             </p>
@@ -63,10 +64,14 @@ export const ConfiguredDataElements =({caption, checkDataElements, dataElements,
                         <tfoot>
                         <tr className="font-semibold text-gray-900 dark:text-white">
                             <th colSpan={3} className="px-6 py-3 text-base">
+                                <button type="button"
+                                        className="default-btn py-1"
+                                        onClick={onCancel}>Cancel
+                                </button>
                                 {checkDataElements?.length > 0 &&
                                     <button type="button"
                                             className="primary-btn py-1"
-                                            onClick={onSave}>Save stage
+                                            onClick={onSave}>Next
                                     </button>
                                 }
                                 {configuredStages[selectedStage] &&
@@ -91,6 +96,8 @@ ConfiguredDataElements.propTypes = {
     configuredStages: PropTypes.object,
     dataElements: PropTypes.array,
     selectedStage: PropTypes.string,
+    stages: PropTypes.array,
+    onCancel: PropTypes.func,
     onDelete: PropTypes.func,
     onSave: PropTypes.func,
     onSelect: PropTypes.func,
