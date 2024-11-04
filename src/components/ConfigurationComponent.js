@@ -1,22 +1,22 @@
-import { useDataEngine, useDataQuery, useAlert } from '@dhis2/app-runtime';
+import { useAlert, useDataEngine, useDataQuery } from '@dhis2/app-runtime';
 import i18n from '@dhis2/d2-i18n';
 import { Transfer } from '@dhis2/ui';
 import React, { useContext, useEffect, useState } from 'react';
-import {  IconView24} from '@dhis2/ui-icons'; 
 import { config } from '../consts.js';
 import { SharedStateContext } from '../utils.js';
-import { Navigation } from './Navigation.js';
-import ProgramComponent from './ProgramComponent.js';
-import ProgramStageComponent from './ProgramStageComponent.js';
-import TooltipComponent from './TooltipComponent.js';
-import ConfigureCondition from './ConfigureConditionComponent.js';
 import { ConfiguredDataElements } from './ConfiguredDataElements.js';
 import { ConfiguredStagesComponent } from './ConfiguredStagesComponent.js';
 import { DataElementSortComponent } from './DataElementSortComponent.js';
-
-
+import { Navigation } from './Navigation.js';
+import ProgramComponent from './ProgramComponent.js';
+import ProgramStageComponent from './ProgramStageComponent.js';
 
 const ConfigurationComponent = () => {
+    const { show } = useAlert(
+        ({ msg }) => msg,
+        ({ type }) => ({ [type]: true })
+    )
+
     const sharedState = useContext(SharedStateContext)
 
     const {
@@ -44,9 +44,7 @@ const ConfigurationComponent = () => {
     const [editing1, setEditing1] = useState(false);
     const [stages, setStages] = useState([]);
     const [columnDisplay, setColumnDisplay] = useState(false);
-    const [configuredCondition, setSelectedConfiguredCondition] = useState([]); 
-    const [showConditionsModal, setShowConditionsModal] =useState(false); 
-    const [selectedCondition, setSelectedConditions] =useState(''); 
+    const [configuredCondition, setSelectedConfiguredCondition] = useState([]);
     const [deleteAction, setDeleteAction] = useState(false)
 
     const engine = useDataEngine();
@@ -169,7 +167,7 @@ const ConfigurationComponent = () => {
             if (configuredCondition.length >0 ){
                 const filteredCondition = configuredCondition.filter(item => item.length !== 0);
                 if (filteredCondition.length > 0){
-                    dataStoreOperation("configuredCondition", filteredCondition)               
+                    dataStoreOperation("configuredCondition", filteredCondition)
                 }
             }
             if (configuredCondition.length  === 0 && deleteAction){
@@ -200,14 +198,6 @@ const ConfigurationComponent = () => {
             mutation.type = 'update';
             engine.mutate(mutation);
         })
-    }
-
-    const handleConfigureCondition = (connditionID) =>{
-        console.log(showConditionsModal)
-        console.log(connditionID)
-        setSelectedConditions(connditionID)
-        setShowConditionsModal(true)
-
     }
 
     const dataStoreOperation = (type, data) => {
@@ -430,6 +420,8 @@ const ConfigurationComponent = () => {
                                             caption={'Select data Elements the will be visible for the selected stage when attending to participants'}
                                             selectedStage={selectedStage}
                                             checkDataElements={groupEdit ? selectedGroupDataElements : selectedDataElements}
+                                            configuredCondition={configuredCondition}
+                                            setSelectedConfiguredCondition={setSelectedConfiguredCondition}
                                             onSelectAll={(checked) => {
                                                 if (checked) {
                                                     if (groupEdit) {
@@ -502,10 +494,12 @@ const ConfigurationComponent = () => {
                                                 // Reset states after saving
                                                 setEditing(false);
                                                 setConfigure1(true);
-                                                setSelectedStage('');
                                             }}
-                                            tooltip_func={handleConfigureCondition}
-                                            
+                                            onCancel={() => {
+                                                setEditing(false);
+                                                setConfigure1(false);
+                                            }}
+                                            stages={stages}
                                         />
                                     </div>
                                 }
@@ -529,6 +523,8 @@ const ConfigurationComponent = () => {
 
                                                 dataStoreOperation('configuredStages', stages);
                                             }}
+                                            selectedStage={selectedStage}
+                                            stages={stages}
                                         />
                                     </div>
                                 }
@@ -642,7 +638,11 @@ const ConfigurationComponent = () => {
                                                     setEditing1(false);
                                                     setConfigure2(true)
                                                 }}
-                                                tooltip_func={handleConfigureCondition}
+                                                onCancel={() => {
+                                                    setEditing1(false);
+                                                    setConfigure2(false)
+                                                }}
+                                                stages={stages}
                                             />
                                         </div>
                                     }
@@ -666,24 +666,13 @@ const ConfigurationComponent = () => {
 
                                                     dataStoreOperation('configuredStages', stages);
                                                 }}
+                                                stages={stages}
+                                                selectedStage={selectedStage}
                                             />
                                         </div>
                                     }
-                                                
                                 </div>
                             }
-                            {showConditionsModal && 
-                                                        
-                                                        <ConfigureCondition
-                                                            dataElements={dataElements} 
-                                                            selectedCondition={selectedCondition}
-                                                            configuredCondition={configuredCondition}
-                                                            setShowConditionsModal={setShowConditionsModal}
-                                                            setSelectedConfiguredCondition={setSelectedConfiguredCondition}
-                                                            setDeleteAction={setDeleteAction}
-                                                            selectedStage={selectedStage}
-                                                        />                    
-                                                    }
                         </div>
                     </div>
                 </div>

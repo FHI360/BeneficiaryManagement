@@ -2,10 +2,16 @@ import { useAlert, useDataEngine, useDataQuery } from '@dhis2/app-runtime';
 import i18n from '@dhis2/d2-i18n';
 import { CalendarInput, Modal, ModalActions, ModalContent, ModalTitle, Pagination } from '@dhis2/ui';
 import classnames from 'classnames';
-import classes from '../../App.module.css'
 import React, { useContext, useEffect, useState } from 'react';
 import { ACTUALIZACAO, ACTUALIZACAO_OPTIONS, config, REFERENCIAS, REFERENCIAS_OPTIONS } from '../../consts.js';
-import { formatDate, getParticipant, searchEntities, SharedStateContext } from '../../utils.js';
+import {
+    formatDate,
+    getParticipant,
+    isObjectEmpty,
+    searchEntities,
+    SharedStateContext,
+    sortEntities
+} from '../../utils.js';
 import { ActualizacaoComponent } from '../ActualizacaoComponent.js';
 import { DataElementComponent } from '../DataElement.js';
 import { Navigation } from '../Navigation.js';
@@ -63,8 +69,8 @@ export const Main = () => {
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [configuredCondition, setSelectedConfiguredCondition] = useState([]); 
-
+    const [toggle, setToggle] = useState(false);
+    const [configuredCondition, setSelectedConfiguredCondition] = useState([]);
 
     const {show} = useAlert(
         ({msg}) => msg,
@@ -152,11 +158,6 @@ export const Main = () => {
     }, [dataStore, selectedProgram]);
 
     useEffect(() => {
-        console.log('edits: ', edits)
-    }, [edits])
-
-
-    useEffect(() => {
         refetchDataElements({id: selectedStage});
         if (elementsData && elementsData.programStage && elementsData.programStage.programStageDataElements) {
             const dataElements = elementsData.programStage.programStageDataElements.map(data => data.dataElement);
@@ -179,20 +180,21 @@ export const Main = () => {
                 }
             }).then(res => {
                 if (res && res.entities) {
-                    setAllEntities(res.entities.instances);
+                    const entities = sortEntities(res.entities.instances, nameAttributes)
+                    setAllEntities(entities);
                     setTotal(res.entities.total);
 
                     if (filterValue && Object.keys(filterValue).length) {
                         Object.keys(filterValue).forEach(key => {
-                            const entities = res.entities.instances.filter(entity => {
+                            const filteredEntities = entities.filter(entity => {
                                 const attribute = entity.attributes.find(attr => attr.attribute === key);
                                 return attribute && attribute.value + '' === filterValue[key] + '';
                             });
 
-                            setEntities(entities);
+                            setEntities(filteredEntities);
                         })
                     } else {
-                        setEntities(res.entities.instances);
+                        setEntities(entities);
                     }
                     setLoading(false);
                 } else {
@@ -201,7 +203,7 @@ export const Main = () => {
                 }
             });
         }
-    }, [orgUnit, selectedProgram, page, pageSize]);
+    }, [orgUnit, selectedProgram, page, pageSize, toggle]);
 
     useEffect(() => {
         attributesRefetch({program: selectedProgram})
@@ -377,7 +379,6 @@ export const Main = () => {
                     }
                 }
 
-                // event => For line record
                 values.forEach(value => {
                     if (value.dataElement) {
                         const dataValue = event.dataValues.find(dv => dv.dataElement === value.dataElement.id) || {};
@@ -396,7 +397,7 @@ export const Main = () => {
                     }
                 });
 
-                (configuredStages[selectedStage] && configuredStages[selectedStage]['groupDataElements'] || []).map(de => {
+                (groupEdit && configuredStages[selectedStage] && configuredStages[selectedStage]['groupDataElements'] || []).map(de => {
                     return {
                         dataElement: de,
                         value: groupDataElementValue(de)
@@ -435,7 +436,8 @@ export const Main = () => {
             if (response.status === 'OK') {
                 setEdits([]);
                 setSaving(false);
-                setPage(1);
+                setPage( 1);
+                setToggle((prev) => !prev);
                 show({msg: i18n.t('Data successfully updated'), type: 'success'});
             } else {
                 show({msg: i18n.t('There was an error updating records'), type: 'error'});
@@ -443,108 +445,67 @@ export const Main = () => {
         });
     }
 
-    const checkForCondition = (entity, date, dataElement, value)=> {
-        // createOrUpdateEvent(entity, date, dataElement, value)
-        console.log('configuredCondition: ',configuredCondition)
-        const equals = configuredCondition?.filter(condition => condition.operator === 'equals' )
-        console.log(equals)
-
-        if (equals){
-            if (equals.length > 0)                
-                {
-                    const program_stage_rules = equals?.filter(condition => condition.selectedStage === selectedStage )
-                    const DataElement_in_view_rules = program_stage_rules?.filter(condition => condition.dataElement_one === dataElement.id )                    
-                    if (DataElement_in_view_rules.length > 0){
-
-                        DataElement_in_view_rules.forEach(rule => {
-                            const dataElement_two = rule.dataElement_two || ''
-                            const check_for_dataElement_two = dataElements?.find(item => item.id === dataElement_two )
-                            if (check_for_dataElement_two){
-                                const dataElement_two_data = dataElements?.find(item => item.id === dataElement_two )
-                                const equals_to_value = rule.equals_to.toLowerCase() === "true";
-                                if (equals_to_value === value)
-                                    {
-                                        console.log("equals_to_value: ", equals_to_value)
-                                        createOrUpdateEvent(entity, date, dataElement_two_data, rule.value_text)
-                                    } 
-                            }
-                        })
-                    }                    
-                }
-        }
-        createOrUpdateEvent(entity, date, dataElement, value)
-    }
     // eslint-disable-next-line max-params
-    const createOrUpdateEvent = (entity, date, dataElement, value) => {
-        console.log('processing: ', dataElement)
+    const createOrUpdateEvent = async (entity, date, dataElement, value) => {
+
+        // Validate integer constraints
         if (dataElement.valueType.includes('INTEGER')) {
             value = parseInt(value);
-            if (dataElement.valueType === 'INTEGER_ZERO_OR_POSITIVE' && parseInt(value) < 0) {
+            if (dataElement.valueType === 'INTEGER_ZERO_OR_POSITIVE' && value < 0) {
                 alert('Please enter a non-negative integer');
                 return;
             }
-            if (dataElement.valueType === 'INTEGER_POSITIVE' && parseInt(value) <= 0) {
+            if (dataElement.valueType === 'INTEGER_POSITIVE' && value <= 0) {
                 alert('Please enter a number greater than 0');
                 return;
             }
-            if (dataElement.valueType === 'INTEGER_NEGATIVE' && parseInt(value) >= 0) {
+            if (dataElement.valueType === 'INTEGER_NEGATIVE' && value >= 0) {
                 alert('Please enter a number less than 0');
                 return;
             }
         }
-        const _edits = edits.filter(edit => edit.entity.trackedEntity !== entity.trackedEntity);
-        let currentEdit = edits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
-        const originalEdit = originalEdits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
-        if (!currentEdit) {
-            currentEdit = {
-                entity,
-                values: []
-            };
-        }
-        const values = currentEdit.values.filter(v => !(v.dataElement.id === dataElement.id && formatDate(date) === formatDate(v.date)));
-        values.push({
-            value,
-            dataElement,
-            date
-        });
-        currentEdit.values = values;
 
-        const values2 = [...values];
-        const values1 = [...(Object.assign({}, originalEdits.find(edit => edit.entity.trackedEntity === entity.trackedEntity))?.values ?? [])];
-        const editChanged = () => {
-            if (values2.length !== values1.length) {
-                return true;
+        setEdits((prevEdits) => {
+            const _edits = [...prevEdits];
+            let currentEdit = _edits.find
+            (edit => edit.entity.trackedEntity === entity.trackedEntity);
+            const originalEdit = originalEdits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
+
+            // Initialize currentEdit if it doesn't exist
+            if (!currentEdit) {
+                currentEdit = { entity, values: [] };
+                _edits.push(currentEdit);
             }
-            return values1.some(value => {
-                const match = values2.find(v => v.dataElement.id === value.dataElement.id && formatDate(v.date) === formatDate(value.date));
-                if (!match) {
-                    return true;
-                }
-                if (value.dataElement.valueType === 'TRUE_ONLY' || value.dataElement.valueType === 'BOOLEAN') {
-                    return !match.value !== !value.value;
-                }
-                return ((match.value ?? '') + '') !== ((value.value ?? '') + '');
 
-            })
-        }
+            // Filter out the specific `dataValue` for the same `dataElement` and `date`, then add the new `dataValue`
+            const newValue = { value, dataElement, date };
+            currentEdit.values = [
+                ...currentEdit.values.filter(v => !(v.dataElement.id === dataElement.id && formatDate(v.date) === formatDate(date))),
+                newValue
+            ];
 
-        if (originalEdit?.entity.trackedEntity !== currentEdit.entity.trackedEntity || editChanged()) {
-            _edits.push(currentEdit);
+            // Check if currentEdit matches the originalEdit for redo functionality
+            const isRevertedToOriginal = originalEdit && originalEdit.values.length === currentEdit.values.length
+                && originalEdit.values.every(ov => currentEdit.values.some(
+                    cv => cv.dataElement.id === ov.dataElement.id &&
+                        formatDate(cv.date) === formatDate(ov.date) &&
+                        cv.value === ov.value
+                ));
 
+
+            // If the entity's state has reverted to its original values, remove it from _edits
+            const finalEdits = isRevertedToOriginal
+                ? _edits.filter(edit => edit.entity.trackedEntity !== entity.trackedEntity)
+                : _edits;
+
+            // Add a new original edit if this is the first edit for the entity
             if (!originalEdit) {
-                setOriginalEdits([...originalEdits, {...currentEdit}]);
-            } else {
-                const _originalEdits = originalEdits.filter(edit => edit.entity.trackedEntity !== entity.trackedEntity);
-                const oldValues = {...originalEdit}.values.filter(v => v.dataElement.id === dataElement.id && formatDate(v.date) === formatDate(date));
-                const newValues = currentEdit.values.filter(v => !(v.dataElement.id === dataElement.id && formatDate(v.date) === formatDate(date)));
-                oldValues.push(...newValues);
-                setOriginalEdits([..._originalEdits, Object.assign({}, originalEdit, {values: oldValues})]);
+                setOriginalEdits(prevOriginalEdits => [...prevOriginalEdits, { ...currentEdit }]);
             }
-        }
-        console.log('_edits: ', _edits)
 
-        setEdits(_edits);
-    }
+            return finalEdits;
+        });
+    };
 
     const createOrUpdateGroupValue = (dataElement, value) => {
         setGroupValues(prevValues => ({
@@ -601,6 +562,43 @@ export const Main = () => {
         }
     }
 
+    const checkForCondition = async (entity, date, dataElement, value) => {
+        // Ensure that data is available
+        if (!configuredCondition || !dataElements || !selectedStage) {
+            return;
+        }
+
+        const equals = configuredCondition.filter(condition => condition.operator === 'equals');
+
+        if (equals && equals.length > 0) {
+            const programStageRules = equals.filter(condition => condition.selectedStage === selectedStage);
+            const dataElementRules = programStageRules.filter(condition => condition.dataElement_one === dataElement.id);
+
+            if (dataElementRules.length > 0) {
+                for (const rule of dataElementRules) {
+                    const dataElementTwo = rule.dataElement_two || '';
+                    const checkForDataElementTwo = dataElements.find(item => item.id === dataElementTwo);
+
+                    if (checkForDataElementTwo) {
+                        const equalsToValue = rule.equals_to.toLowerCase() === "true";
+
+                        if (equalsToValue === value) {
+
+                            // Await the first createOrUpdateEvent call
+                            await createOrUpdateEvent(entity, date, checkForDataElementTwo, rule.value_text);
+
+                            // Run the second createOrUpdateEvent after the first completes
+                            await createOrUpdateEvent(entity, date, dataElement, value);
+                        }
+                    }
+                }
+            }
+        } else {
+            await createOrUpdateEvent(entity, date, dataElement, value);
+        }
+    };
+
+
     return (
         <>
             <div className="flex flex-row w-full h-full">
@@ -615,7 +613,7 @@ export const Main = () => {
                                         <div className="w-3/12 p-3">
                                             <label htmlFor="stage"
                                                    className="label">
-                                                {i18n.t('Org Units')}
+                                                {i18n.t('Event Venue')}
                                             </label>
                                             <OrganisationUnitComponent
                                                 handleOUChange={handleOUChange}
@@ -776,8 +774,7 @@ export const Main = () => {
                                                                                                 value={groupDataElementValue(cde)}
                                                                                                 dataElement={de}
                                                                                                 labelVisible={true}
-                                                                                                valueChanged={createOrUpdateGroupValue}
-                                                                                                selectedStage={selectedStage}/>
+                                                                                                valueChanged={createOrUpdateGroupValue}/>
                                                                                         }
                                                                                     </>
                                                                                 })}
@@ -876,12 +873,28 @@ export const Main = () => {
                                                                             {loading &&
                                                                                 <SpinnerComponent/>
                                                                             }
-                                                                            {entities.length > 0 &&
-                                                                                <div className="w-3/12">
-                                                                                    <SearchComponent
-                                                                                        search={(value) => search(value)}/>
-                                                                                </div>
-                                                                            }
+                                                                            <div className="flex-row flex">
+                                                                                {allEntities.length > 0 &&
+                                                                                    <div className="w-3/12">
+                                                                                        <SearchComponent
+                                                                                            search={(value) => search(value)}/>
+                                                                                    </div>
+                                                                                }
+                                                                                {((groupEdit && !isObjectEmpty(groupValues) && selectedEntities.length > 0) || (!groupEdit && edits.length > 0)) &&
+                                                                                    <div
+                                                                                        className="w-9/12 flex flex-row justify-end">
+                                                                                        <button type="button"
+                                                                                                className={saving || loading ? 'primary-btn-disabled' : 'primary-btn'}
+                                                                                                onClick={saveEdits}>
+                                                                                            {(saving || loading) &&
+                                                                                                <SpinnerComponent/>
+                                                                                            }
+                                                                                            Save Records
+                                                                                        </button>
+                                                                                    </div>
+                                                                                }
+                                                                            </div>
+
                                                                             <table
                                                                                 className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                                                                                 <caption
@@ -890,24 +903,6 @@ export const Main = () => {
                                                                                     <p className="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
 
                                                                                     </p>
-                                                                                    <div
-                                                                                        className="flex flex-row justify-end">
-                                                                                        {/*<button type="button"
-                                                                                                className="primary-btn"
-                                                                                                onClick={() => setConfirmShow(true)}>Reload
-                                                                                            records
-                                                                                        </button>*/}
-                                                                                        {edits.length !== 0 || (selectedEntities.length > 0 && groupValues) &&
-                                                                                            <button type="button"
-                                                                                                    className={saving || loading ? 'primary-btn-disabled' : 'primary-btn'}
-                                                                                                    onClick={saveEdits}>
-                                                                                                {(saving || loading) &&
-                                                                                                    <SpinnerComponent/>
-                                                                                                }
-                                                                                                Save Records
-                                                                                            </button>
-                                                                                        }
-                                                                                    </div>
                                                                                 </caption>
                                                                                 <thead
                                                                                     className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
@@ -1089,7 +1084,7 @@ export const Main = () => {
                                                                                                                                         value={dataElementValue(date, de.id, entity)}
                                                                                                                                         dataElement={de}
                                                                                                                                         labelVisible={true}
-                                                                                                                                        valueChanged={(dataElement, value) => createOrUpdateEvent(entity, date, de, value)}/>
+                                                                                                                                        valueChanged={(dataElement, value) => checkForCondition(entity, date, de, value)}/>
                                                                                                                                 }
                                                                                                                             </>
                                                                                                                         })}
