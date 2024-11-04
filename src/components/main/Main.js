@@ -70,6 +70,7 @@ export const Main = () => {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [toggle, setToggle] = useState(false);
+    const [configuredCondition, setSelectedConfiguredCondition] = useState([]);
 
     const {show} = useAlert(
         ({msg}) => msg,
@@ -151,6 +152,7 @@ export const Main = () => {
                 setEndDateVisible(entry.value.endDateVisible);
                 setColumnDisplay(entry.value.columnDisplay);
                 setGroupEdit(entry.value.groupEdit);
+                setSelectedConfiguredCondition(entry.value.configuredCondition || []);
             }
         }
     }, [dataStore, selectedProgram]);
@@ -231,7 +233,8 @@ export const Main = () => {
             configuredStages,
             endDateVisible,
             groupEdit,
-            columnDisplay
+            columnDisplay,
+            configuredCondition
         }
         value[type] = data;
         const mutation = {
@@ -443,8 +446,7 @@ export const Main = () => {
     }
 
     // eslint-disable-next-line max-params
-    const createOrUpdateEvent = (entity, date, dataElement, value) => {
-        console.log('Change', entity, date, dataElement, value);
+    const createOrUpdateEvent = async (entity, date, dataElement, value) => {
 
         // Validate integer constraints
         if (dataElement.valueType.includes('INTEGER')) {
@@ -465,7 +467,8 @@ export const Main = () => {
 
         setEdits((prevEdits) => {
             const _edits = [...prevEdits];
-            let currentEdit = _edits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
+            let currentEdit = _edits.find
+            (edit => edit.entity.trackedEntity === entity.trackedEntity);
             const originalEdit = originalEdits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
 
             // Initialize currentEdit if it doesn't exist
@@ -558,6 +561,43 @@ export const Main = () => {
             setEntities(allEntities);
         }
     }
+
+    const checkForCondition = async (entity, date, dataElement, value) => {
+        // Ensure that data is available
+        if (!configuredCondition || !dataElements || !selectedStage) {
+            return;
+        }
+
+        const equals = configuredCondition.filter(condition => condition.operator === 'equals');
+
+        if (equals && equals.length > 0) {
+            const programStageRules = equals.filter(condition => condition.selectedStage === selectedStage);
+            const dataElementRules = programStageRules.filter(condition => condition.dataElement_one === dataElement.id);
+
+            if (dataElementRules.length > 0) {
+                for (const rule of dataElementRules) {
+                    const dataElementTwo = rule.dataElement_two || '';
+                    const checkForDataElementTwo = dataElements.find(item => item.id === dataElementTwo);
+
+                    if (checkForDataElementTwo) {
+                        const equalsToValue = rule.equals_to.toLowerCase() === "true";
+
+                        if (equalsToValue === value) {
+
+                            // Await the first createOrUpdateEvent call
+                            await createOrUpdateEvent(entity, date, checkForDataElementTwo, rule.value_text);
+
+                            // Run the second createOrUpdateEvent after the first completes
+                            await createOrUpdateEvent(entity, date, dataElement, value);
+                        }
+                    }
+                }
+            }
+        } else {
+            await createOrUpdateEvent(entity, date, dataElement, value);
+        }
+    };
+
 
     return (
         <>
@@ -1044,7 +1084,7 @@ export const Main = () => {
                                                                                                                                         value={dataElementValue(date, de.id, entity)}
                                                                                                                                         dataElement={de}
                                                                                                                                         labelVisible={true}
-                                                                                                                                        valueChanged={(dataElement, value) => createOrUpdateEvent(entity, date, de, value)}/>
+                                                                                                                                        valueChanged={(dataElement, value) => checkForCondition(entity, date, de, value)}/>
                                                                                                                                 }
                                                                                                                             </>
                                                                                                                         })}
@@ -1066,7 +1106,7 @@ export const Main = () => {
                                                                                                                                     value={dataElementValue(date, de.id, entity)}
                                                                                                                                     dataElement={de}
                                                                                                                                     labelVisible={false}
-                                                                                                                                    valueChanged={(dataElement, value) => createOrUpdateEvent(entity, date, de, value)}/>
+                                                                                                                                    valueChanged={(dataElement, value) => checkForCondition(entity, date, de, value)}/>
                                                                                                                             </div>
                                                                                                                         }
                                                                                                                     </td>

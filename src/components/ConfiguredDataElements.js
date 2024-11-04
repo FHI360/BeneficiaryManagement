@@ -1,7 +1,32 @@
+import { IconView24 } from '@dhis2/ui-icons';
 import PropTypes from 'prop-types';
-import React from 'react';
+import React, { useState } from 'react';
+import ConfigureCondition from './ConfiguredConditionComponent.js';
+import TooltipComponent from './TooltipComponent.js';
 
-export const ConfiguredDataElements =({stages, caption, checkDataElements, dataElements, configuredStages, selectedStage, onDelete, onSave, onSelect, onSelectAll, onCancel})=> {
+export const ConfiguredDataElements = ({
+                                           setSelectedConfiguredCondition,
+                                           configuredCondition,
+                                           stages,
+                                           caption,
+                                           checkDataElements,
+                                           dataElements,
+                                           configuredStages,
+                                           selectedStage,
+                                           onDelete,
+                                           onSave,
+                                           onSelect,
+                                           onSelectAll,
+                                           onCancel
+                                       }) => {
+    const [showConditionsModal, setShowConditionsModal] = useState(false);
+    const [selectedCondition, setSelectedConditions] = useState('');
+    const [deleteAction, setDeleteAction] = useState(false)
+
+    const handleConfigureCondition = (connditionID) => {
+        setSelectedConditions(connditionID)
+        setShowConditionsModal(true)
+    }
 
     return (
         <>
@@ -56,7 +81,18 @@ export const ConfiguredDataElements =({stages, caption, checkDataElements, dataE
                                         </div>
                                     </td>
                                     <td>{index + 1}</td>
-                                    <td className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{dataElement.name}</td>
+                                    <td className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{dataElement.name}
+                                        <TooltipComponent
+                                            IconType={IconView24}
+                                            btnFunc={handleConfigureCondition}
+                                            conditionID={dataElement.id}
+                                            // conditionID={selectedCondition}
+                                            dynamicText="Rule"
+                                            buttonMode="secondary"
+                                            customIcon={true}
+                                            disabled={false}
+                                        />
+                                    </td>
                                 </tr>
                             </>
                         })}
@@ -85,6 +121,17 @@ export const ConfiguredDataElements =({stages, caption, checkDataElements, dataE
                         </tfoot>
                     </table>
                 </div>
+                {showConditionsModal &&
+                    <ConfigureCondition
+                        dataElements={dataElements}
+                        selectedCondition={selectedCondition}
+                        configuredCondition={configuredCondition}
+                        setShowConditionsModal={setShowConditionsModal}
+                        setSelectedConfiguredCondition={setSelectedConfiguredCondition}
+                        setDeleteAction={setDeleteAction}
+                        selectedStage={selectedStage}
+                    />
+                }
             </div>
         </>
     )
@@ -93,9 +140,11 @@ export const ConfiguredDataElements =({stages, caption, checkDataElements, dataE
 ConfiguredDataElements.propTypes = {
     caption: PropTypes.string,
     checkDataElements: PropTypes.array,
+    configuredCondition: PropTypes.array,
     configuredStages: PropTypes.object,
     dataElements: PropTypes.array,
     selectedStage: PropTypes.string,
+    setSelectedConfiguredCondition: PropTypes.func,
     stages: PropTypes.array,
     onCancel: PropTypes.func,
     onDelete: PropTypes.func,

@@ -6,7 +6,7 @@ export const ConfiguredStagesComponent = ({stages, configuredStages, onEdit, onS
     return (
         <>
             {Object.keys(configuredStages).map((stage) => {
-                if (stage && ((single ?  configuredStages[stage]['individualDataElements'] : configuredStages[stage]['groupDataElements'] || configuredStages[stage]['dataElements']) || []).length > 0) {
+                if (stage && ((single ?  configuredStages[stage]['individualDataElements'] : configuredStages[stage]['dataElements'] || configuredStages[stage]['groupDataElements']) || []).length > 0) {
                     return <>
                         <div className="border-b p-2 bg-gray-100 w-full flex flex-row">
                             <div className="w-7/12">

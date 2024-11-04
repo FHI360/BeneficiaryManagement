@@ -1,4 +1,4 @@
-import { useDataEngine, useDataQuery } from '@dhis2/app-runtime';
+import { useAlert, useDataEngine, useDataQuery } from '@dhis2/app-runtime';
 import i18n from '@dhis2/d2-i18n';
 import { Transfer } from '@dhis2/ui';
 import React, { useContext, useEffect, useState } from 'react';
@@ -12,6 +12,11 @@ import ProgramComponent from './ProgramComponent.js';
 import ProgramStageComponent from './ProgramStageComponent.js';
 
 const ConfigurationComponent = () => {
+    const { show } = useAlert(
+        ({ msg }) => msg,
+        ({ type }) => ({ [type]: true })
+    )
+
     const sharedState = useContext(SharedStateContext)
 
     const {
@@ -39,6 +44,8 @@ const ConfigurationComponent = () => {
     const [editing1, setEditing1] = useState(false);
     const [stages, setStages] = useState([]);
     const [columnDisplay, setColumnDisplay] = useState(false);
+    const [configuredCondition, setSelectedConfiguredCondition] = useState([]);
+    const [deleteAction, setDeleteAction] = useState(false)
 
     const engine = useDataEngine();
 
@@ -147,12 +154,32 @@ const ConfigurationComponent = () => {
                 setEndDateVisible(entry.value.endDateVisible)
                 setGroupEdit(entry.value.groupEdit);
                 setColumnDisplay(entry.value.columnDisplay);
+                setSelectedConfiguredCondition(entry.value.configuredCondition || []);
                 const exists = keyExists;
                 exists[selectedProgram] = true;
                 setKeyExists(exists);
             }
         }
     }, [dataStore, selectedProgram]);
+
+    useEffect(() => {
+        if(configuredCondition){
+            if (configuredCondition.length >0 ){
+                const filteredCondition = configuredCondition.filter(item => item.length !== 0);
+                if (filteredCondition.length > 0){
+                    dataStoreOperation("configuredCondition", filteredCondition)
+                }
+            }
+            if (configuredCondition.length  === 0 && deleteAction){
+                setDeleteAction(false)
+                dataStoreOperation("configuredCondition", configuredCondition)
+                show({ msg: `Condition Successfully Removed`, type: 'success' })
+            }
+        }
+
+    },[
+        configuredCondition
+    ])
 
     const handleProgramChange = (event) => {
         setSelectedProgram(event);
@@ -180,7 +207,8 @@ const ConfigurationComponent = () => {
             configuredStages,
             endDateVisible,
             groupEdit,
-            columnDisplay
+            columnDisplay,
+            configuredCondition
         }
         value[type] = data;
         const mutation = {
@@ -392,6 +420,8 @@ const ConfigurationComponent = () => {
                                             caption={'Select data Elements the will be visible for the selected stage when attending to participants'}
                                             selectedStage={selectedStage}
                                             checkDataElements={groupEdit ? selectedGroupDataElements : selectedDataElements}
+                                            configuredCondition={configuredCondition}
+                                            setSelectedConfiguredCondition={setSelectedConfiguredCondition}
                                             onSelectAll={(checked) => {
                                                 if (checked) {
                                                     if (groupEdit) {
