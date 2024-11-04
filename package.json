@@ -1,7 +1,7 @@
 {
   "name": "ImpactConnect",
-  "version": "1.0.0",
-  "description": "Beneficiary Management",
+  "version": "1.0.0-test",
+  "description": "COVida Beneficiary Management",
   "license": "BSD-3-Clause",
   "private": true,
   "scripts": {
