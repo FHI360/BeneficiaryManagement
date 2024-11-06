@@ -15,11 +15,12 @@ import {
     TableRowHead,
     Transfer
 } from '@dhis2/ui';
-import { SingleSelect, SingleSelectOption } from '@dhis2-ui/select'
 import { IconDelete16 } from '@dhis2/ui-icons';
-import TooltipComponent from './TooltipComponent.js';
-import { generateRandomId } from '../utils.js';
+import { SingleSelect, SingleSelectOption } from '@dhis2-ui/select'
+import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
+import { generateRandomId } from '../utils.js';
+import TooltipComponent from './TooltipComponent.js';
 
 
 const ConfigureCondition = ({
@@ -57,8 +58,6 @@ const ConfigureCondition = ({
 
     }, [configuredCondition])
     useEffect(() => {
-        // If condition doesn't exist, create new and add to array
-        console.log('condition_: ', condition_)
 
         if (conditionExists_ === true) {
             setSelectedConfiguredCondition(prevSelected => [...prevSelected, condition_])
@@ -106,7 +105,6 @@ const ConfigureCondition = ({
 
                     }
                     setConditionExists(!conditionExists)
-                    console.log(conditionExists)
                     setTriggerSaving_(prev => !prev)
 
                 } else {
@@ -810,3 +808,13 @@ const ConfigureCondition = ({
 }
 
 export default ConfigureCondition
+
+ConfigureCondition.propTypes = {
+    configuredCondition: PropTypes.array,
+    dataElements: PropTypes.array,
+    selectedCondition: PropTypes.string,
+    selectedStage: PropTypes.string,
+    setDeleteAction: PropTypes.func,
+    setSelectedConfiguredCondition: PropTypes.func,
+    setShowConditionsModal: PropTypes.func
+}

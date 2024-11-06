@@ -436,7 +436,7 @@ export const Main = () => {
             if (response.status === 'OK') {
                 setEdits([]);
                 setSaving(false);
-                setPage( 1);
+                setPage(1);
                 setToggle((prev) => !prev);
                 show({msg: i18n.t('Data successfully updated'), type: 'success'});
             } else {
@@ -446,7 +446,7 @@ export const Main = () => {
     }
 
     // eslint-disable-next-line max-params
-    const createOrUpdateEvent = async (entity, date, dataElement, value) => {
+    const createOrUpdateEvent = (entity, date, dataElement, value) => {
 
         // Validate integer constraints
         if (dataElement.valueType.includes('INTEGER')) {
@@ -473,12 +473,12 @@ export const Main = () => {
 
             // Initialize currentEdit if it doesn't exist
             if (!currentEdit) {
-                currentEdit = { entity, values: [] };
+                currentEdit = {entity, values: []};
                 _edits.push(currentEdit);
             }
 
             // Filter out the specific `dataValue` for the same `dataElement` and `date`, then add the new `dataValue`
-            const newValue = { value, dataElement, date };
+            const newValue = {value, dataElement, date};
             currentEdit.values = [
                 ...currentEdit.values.filter(v => !(v.dataElement.id === dataElement.id && formatDate(v.date) === formatDate(date))),
                 newValue
@@ -500,7 +500,7 @@ export const Main = () => {
 
             // Add a new original edit if this is the first edit for the entity
             if (!originalEdit) {
-                setOriginalEdits(prevOriginalEdits => [...prevOriginalEdits, { ...currentEdit }]);
+                setOriginalEdits(prevOriginalEdits => [...prevOriginalEdits, {...currentEdit}]);
             }
 
             return finalEdits;
@@ -563,6 +563,11 @@ export const Main = () => {
     }
 
     const checkForCondition = async (entity, date, dataElement, value) => {
+        if (!groupEdit) {
+            createOrUpdateEvent(entity, date, dataElement, value);
+        } else {
+            createOrUpdateGroupValue(dataElement, value);
+        }
         // Ensure that data is available
         if (!configuredCondition || !dataElements || !selectedStage) {
             return;
@@ -584,11 +589,50 @@ export const Main = () => {
 
                         if (equalsToValue === value) {
 
-                            // Await the first createOrUpdateEvent call
-                            await createOrUpdateEvent(entity, date, checkForDataElementTwo, rule.value_text);
+                            if (!groupEdit) {
+                                // Await the first createOrUpdateEvent call
+                                createOrUpdateEvent(entity, date, checkForDataElementTwo, rule.value_text);
 
-                            // Run the second createOrUpdateEvent after the first completes
-                            await createOrUpdateEvent(entity, date, dataElement, value);
+                                // Run the second createOrUpdateEvent after the first completes
+                                createOrUpdateEvent(entity, date, dataElement, value);
+                            } else {
+                                createOrUpdateGroupValue(dataElement, value);
+                                createOrUpdateGroupValue(checkForDataElementTwo, rule.value_text);
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            await createOrUpdateEvent(entity, date, dataElement, value);
+        }
+
+        const lessThan = configuredCondition.filter(condition => condition.operator === 'lessThan');
+
+        if (lessThan && lessThan.length > 0) {
+            const programStageRules = lessThan.filter(condition => condition.selectedStage === selectedStage);
+            const dataElementRules = programStageRules.filter(condition => condition.dataElement_one === dataElement.id);
+
+            if (dataElementRules.length > 0) {
+                for (const rule of dataElementRules) {
+                    const dataElementTwo = rule.dataElement_two || '';
+                    const checkForDataElementTwo = dataElements.find(item => item.id === dataElementTwo);
+
+                    if (checkForDataElementTwo) {
+                        const equalsToValue = rule.equals_to.toLowerCase() === "true";
+
+                        if (equalsToValue === value) {
+
+                            if (!groupEdit) {
+                                // Await the first createOrUpdateEvent call
+                                createOrUpdateEvent(entity, date, checkForDataElementTwo, rule.value_text);
+
+                                // Run the second createOrUpdateEvent after the first completes
+                                createOrUpdateEvent(entity, date, dataElement, value);
+                            } else {
+                                createOrUpdateGroupValue(dataElement, value);
+                                createOrUpdateGroupValue(checkForDataElementTwo, rule.value_text);
+                            }
                         }
                     }
                 }
@@ -774,7 +818,7 @@ export const Main = () => {
                                                                                                 value={groupDataElementValue(cde)}
                                                                                                 dataElement={de}
                                                                                                 labelVisible={true}
-                                                                                                valueChanged={createOrUpdateGroupValue}/>
+                                                                                                valueChanged={(dataElement, value) => checkForCondition(null, null, dataElement, value)}/>
                                                                                         }
                                                                                     </>
                                                                                 })}
@@ -805,7 +849,7 @@ export const Main = () => {
                                                                                             group={true}
                                                                                             groupDataElementValue={groupDataElementValue}
                                                                                             dataElements={dataElements}
-                                                                                            valueChange={(e, d, dataElement, value) => createOrUpdateGroupValue(dataElement, value)}/>
+                                                                                            valueChange={(e, d, dataElement, value) => checkForCondition(null, null, dataElement, value)}/>
                                                                                         </tbody>
                                                                                     </table>
                                                                                 }
@@ -845,7 +889,7 @@ export const Main = () => {
                                                                                                 group={true}
                                                                                                 groupDataElementValue={groupDataElementValue}
                                                                                                 dataElements={dataElements}
-                                                                                                valueChange={(e, d, dataElement, value) => createOrUpdateGroupValue(dataElement, value)}/>
+                                                                                                valueChange={(e, d, dataElement, value) => checkForCondition(null, null, dataElement, value)}/>
                                                                                         </tr>
                                                                                         </tbody>
                                                                                     </table>
@@ -966,21 +1010,22 @@ export const Main = () => {
                                                                                             }
                                                                                         </>
                                                                                     }
-                                                                                    {![REFERENCIAS, ACTUALIZACAO].includes(selectedStage) && !groupEdit && configuredStages[selectedStage] && (configuredStages[selectedStage]['dataElements'] || []).map((id, idx) => {
-                                                                                        const de = dataElements.find(e => e.id === id);
-                                                                                        return <th key={idx}
-                                                                                                   rowSpan={5}
-                                                                                                   style={{width: `${66.66 / ((configuredStages[selectedStage]['dataElements'] || []).length || 1)}px`}}
-                                                                                                   className="px-4 py-3 h-72 border">
-                                                                                            <div
-                                                                                                className="flex justify-center items-end h-full">
+                                                                                    {![REFERENCIAS, ACTUALIZACAO].includes(selectedStage) && !groupEdit && columnDisplay && configuredStages[selectedStage]
+                                                                                        && (configuredStages[selectedStage]['dataElements'] || []).map((id, idx) => {
+                                                                                            const de = dataElements.find(e => e.id === id);
+                                                                                            return <th key={idx}
+                                                                                                       rowSpan={5}
+                                                                                                       style={{width: `${66.66 / ((configuredStages[selectedStage]['dataElements'] || []).length || 1)}px`}}
+                                                                                                       className="px-4 py-3 h-72 border">
+                                                                                                <div
+                                                                                                    className="flex justify-center items-end h-full">
                                                                                                                 <span
                                                                                                                     className="whitespace-nowrap block text-left -rotate-90 w-16 pb-10 pl-2">
                                                                                                                     {de?.name}
                                                                                                                 </span>
-                                                                                            </div>
-                                                                                        </th>
-                                                                                    })
+                                                                                                </div>
+                                                                                            </th>
+                                                                                        })
                                                                                     }
                                                                                 </tr>
                                                                                 {selectedStage === ACTUALIZACAO && !groupEdit &&

@@ -389,6 +389,7 @@ const ConfigurationComponent = () => {
                                         {(!configure1 && !editing) &&
                                             <ConfiguredStagesComponent stages={stages}
                                                                        configuredStages={configuredStages}
+                                                                       groupEdit={groupEdit}
                                                                        onSort={(stage) => {
                                                                            setConfigure1(true);
                                                                            setEditing(false);
@@ -471,25 +472,16 @@ const ConfigurationComponent = () => {
                                                 dataStoreOperation('configuredStages', stages);
                                             }}
                                             onSave={() => {
-                                                const updatedStages = { ...configuredStages };
-
-                                                if (selectedStage) {
-                                                    // Get the current stage configuration or initialize with default structure if undefined
-                                                    const currentStageConfig = updatedStages[selectedStage] || {};
-
-                                                    // Update the current stage configuration based on the editing mode
-                                                    updatedStages[selectedStage] = {
-                                                        individualDataElements: currentStageConfig.individualDataElements,
-                                                        dataElements: !groupEdit ? selectedDataElements : currentStageConfig.dataElements,
-                                                        groupDataElements: groupEdit ? selectedGroupDataElements : currentStageConfig.groupDataElements,
-                                                    };
-
-                                                    // Update the configuredStages state with the modified stages
-                                                    setConfiguredStages(updatedStages);
-
-                                                    // Persist the updated stages to the datastore
-                                                    dataStoreOperation('configuredStages', updatedStages);
-                                                }
+                                                const updatedStages = {
+                                                    ...configuredStages,
+                                                    [selectedStage]: {
+                                                        ...configuredStages[selectedStage],  // Retain existing properties
+                                                        individualDataElements: configuredStages[selectedStage]?.individualDataElements || [],
+                                                        dataElements: !groupEdit ? selectedDataElements : configuredStages[selectedStage]?.dataElements || [],
+                                                        groupDataElements: groupEdit ? selectedGroupDataElements : configuredStages[selectedStage]?.groupDataElements || [],
+                                                    }
+                                                };
+                                                dataStoreOperation('configuredStages', updatedStages);
 
                                                 // Reset states after saving
                                                 setEditing(false);
@@ -521,7 +513,6 @@ const ConfigurationComponent = () => {
                                                 setConfigure1(false);
                                                 setEditing(false)
 
-                                                dataStoreOperation('configuredStages', stages);
                                             }}
                                             selectedStage={selectedStage}
                                             stages={stages}
@@ -577,8 +568,10 @@ const ConfigurationComponent = () => {
                                                 </>
                                             }
                                             {!editing1 && !configure2 &&
-                                                <ConfiguredStagesComponent stages={stages} configuredStages={configuredStages}
+                                                <ConfiguredStagesComponent stages={stages}
+                                                                           configuredStages={configuredStages}
                                                                            single={true}
+                                                                           groupEdit={groupEdit}
                                                                            onSort={(stage) => {
                                                                                setConfigure2(true);
                                                                                setEditing1(false);
@@ -631,10 +624,14 @@ const ConfigurationComponent = () => {
                                                     dataStoreOperation('configuredStages', stages);
                                                 }}
                                                 onSave={() => {
-                                                    stages[selectedStage] = {
-                                                        ...stages[selectedStage],  // Spread to retain existing properties
-                                                        individualDataElements: [...selectedIndividualDataElements], // Clone array to prevent reference issues
-                                                    };
+                                                    const updated = {
+                                                        ...configuredStages,
+                                                        [selectedStage]: {
+                                                            ...configuredStages[selectedStage],  // Retain existing properties
+                                                            individualDataElements: [...selectedIndividualDataElements], // Clone array to prevent reference issues
+                                                        }
+                                                    }
+                                                    dataStoreOperation('configuredStages', updated);
                                                     setEditing1(false);
                                                     setConfigure2(true)
                                                 }}
@@ -663,8 +660,6 @@ const ConfigurationComponent = () => {
                                                     setSelectedStage('');
                                                     setConfigure2(false);
                                                     setEditing1(false);
-
-                                                    dataStoreOperation('configuredStages', stages);
                                                 }}
                                                 stages={stages}
                                                 selectedStage={selectedStage}
