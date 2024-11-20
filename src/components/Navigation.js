@@ -1,5 +1,6 @@
 import classnames from 'classnames';
 import React from 'react'
+import classes from '../App.module.css'
 import { Link, useMatch, useNavigate, } from 'react-router-dom';
 
 function NavigationItem({to, children, ...props}) {
@@ -20,19 +21,25 @@ function NavigationItem({to, children, ...props}) {
     )
 
     return (
-        <button type="button"
-                onClick={onClick}
-                className={classess}>
-            <Link to={to} {...props}>
-                {children}
-            </Link>
-        </button>
+        // <button type="button"
+        //         onClick={onClick}
+        //         className={classess}>
+        //     <Link to={to} {...props}>
+        //         {children}
+        //     </Link>
+        // </button>
+
+        <li className={(isActive ? ` ${classes.customLinkActive}` : '')} onClick={onClick}>
+        <Link to={to} {...props}>
+            {children}
+        </Link>
+        </li>
     )
 }
 
 export const Navigation = () => {
     return <>
-        <div
+        {/* <div
             className="relative top-0 left-0 z-50 w-full h-16 bg-white border-t border-gray-200 dark:bg-gray-700 dark:border-gray-600">
             <div className="grid h-full max-w-lg grid-cols-4 mx-auto font-medium">
                 <NavigationItem to="/">
@@ -42,6 +49,15 @@ export const Navigation = () => {
                     <span>Configuration</span>
                 </NavigationItem>
             </div>
-        </div>
+        </div> */}
+        <div>
+        <nav className={classes.nav}>
+
+        <ul>
+            <NavigationItem to="/">Home</NavigationItem>
+            <NavigationItem to="/configure">Configuration</NavigationItem>
+        </ul>
+        </nav>
+    </div>
     </>
 }

@@ -1,7 +1,7 @@
 {
-  "name": "ImpactConnect",
+  "name": "USAID_FILOVC_PPA",
   "version": "1.0.0-test",
-  "description": "COVida Beneficiary Management",
+  "description": "USAID FILOVC PPA Beneficiary Management",
   "license": "BSD-3-Clause",
   "private": true,
   "scripts": {
@@ -18,6 +18,7 @@
     "@dhis2/app-runtime": "^3.10.6",
     "flowbite": "^2.5.1",
     "ImpactConnect": "file:",
-    "react-router-dom": "^6.27.0"
+    "react-router-dom": "^6.27.0",
+    "USAID_FILOVC_PPA": "file:"
   }
 }

@@ -13241,6 +13241,16 @@ url-parse@^1.5.3:
     querystringify "^2.1.1"
     requires-port "^1.0.0"
 
+"USAID_FILOVC_PPA@file:":
+  version "1.0.0-test"
+  resolved "file:"
+  dependencies:
+    "@dhis2/app-runtime" "^3.10.6"
+    flowbite "^2.5.1"
+    ImpactConnect "file:"
+    react-router-dom "^6.27.0"
+    USAID_FILOVC_PPA "file:"
+
 util-deprecate@^1.0.1, util-deprecate@^1.0.2, util-deprecate@~1.0.1:
   version "1.0.2"
   resolved "https://registry.npmjs.org/util-deprecate/-/util-deprecate-1.0.2.tgz"

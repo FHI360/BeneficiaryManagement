@@ -2,7 +2,9 @@ import React from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import ConfigurationComponent from './components/ConfigurationComponent.js';
 import { Main } from './components/main/Main.js';
+import {customImage} from './utils'
 import { footerText } from './consts.js';
+import classes from './App.module.css'
 import SetupStateProvider from './SetupStateProvider.js';
 import './index.css';
 
@@ -29,7 +31,8 @@ const MyApp = () => (
                 </div>
 
                 <footer>
-                    <div className="flex items-center">
+                <div className="flex flex-col items-center">
+                        {customImage('logo')}
                         <p className="mx-auto font-semibold">{footerText}</p>
                     </div>
                 </footer>

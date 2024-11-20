@@ -17,12 +17,12 @@ export const dataStoreSearchHistoryQueryMore = {
 }
 
 
-export const MainTitle = 'COVida Impact Connect'
+export const MainTitle = 'USAID FILOVC PPA'
 export const ProjectAttributedescription = 'Project Attribute'
 export const searchBoundarySelected = 'Search Selected Organization Unit Tree'
 export const searchBoundaryfull = 'Search Full Organization Unit Tree'
-const version = 'Test Version v1.0.0 | Beta 11-04-2024'
-export const footerText = `Copyright © FHI360 | COVida | Business Solutions | 2024 | ${version}`
+const version = 'Training Version v1.0.1 | Beta 11-20-2024'
+export const footerText = `Copyright © FHI360 | USAID FILOVC PPA | Business Solutions | 2024 | ${version}`
 export const project_description = 'This application resolves duplicate issues'
 export const panelAction = 'Finding duplicate tracked entities'
 
