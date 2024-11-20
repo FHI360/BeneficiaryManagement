@@ -12,9 +12,9 @@ import ProgramComponent from './ProgramComponent.js';
 import ProgramStageComponent from './ProgramStageComponent.js';
 
 const ConfigurationComponent = () => {
-    const { show } = useAlert(
-        ({ msg }) => msg,
-        ({ type }) => ({ [type]: true })
+    const {show} = useAlert(
+        ({msg}) => msg,
+        ({type}) => ({[type]: true})
     )
 
     const sharedState = useContext(SharedStateContext)
@@ -39,9 +39,7 @@ const ConfigurationComponent = () => {
     const [endDateVisible, setEndDateVisible] = useState(false);
     const [groupEdit, setGroupEdit] = useState(false);
     const [editing, setEditing] = useState(false);
-    const [configure1, setConfigure1] = useState(false);
-    const [configure2, setConfigure2] = useState(false);
-    const [editing1, setEditing1] = useState(false);
+    const [configure, setConfigure] = useState(false);
     const [stages, setStages] = useState([]);
     const [columnDisplay, setColumnDisplay] = useState(false);
     const [configuredCondition, setSelectedConfiguredCondition] = useState([]);
@@ -163,21 +161,21 @@ const ConfigurationComponent = () => {
     }, [dataStore, selectedProgram]);
 
     useEffect(() => {
-        if(configuredCondition){
-            if (configuredCondition.length >0 ){
+        if (configuredCondition) {
+            if (configuredCondition.length > 0) {
                 const filteredCondition = configuredCondition.filter(item => item.length !== 0);
-                if (filteredCondition.length > 0){
+                if (filteredCondition.length > 0) {
                     dataStoreOperation("configuredCondition", filteredCondition)
                 }
             }
-            if (configuredCondition.length  === 0 && deleteAction){
+            if (configuredCondition.length === 0 && deleteAction) {
                 setDeleteAction(false)
                 dataStoreOperation("configuredCondition", configuredCondition)
-                show({ msg: `Condition Successfully Removed`, type: 'success' })
+                show({msg: `Condition Successfully Removed`, type: 'success'})
             }
         }
 
-    },[
+    }, [
         configuredCondition
     ])
 
@@ -320,7 +318,7 @@ const ConfigurationComponent = () => {
                                         className="checkbox"/>
                                     <label
                                         className="pt-2 pl-2 label">
-                                        {i18n.t('Group Action?')}
+                                        {i18n.t('Group Action?')} <span className="text-xs italic">Action will apply to all selected attendees</span>
                                     </label>
                                 </div>
                             </div>
@@ -344,7 +342,7 @@ const ConfigurationComponent = () => {
                             <div className="shadow-sm rounded-md p-4 border border-blue-100 bg-white mb-2">
                                 <label htmlFor="program"
                                        className="block mb-2 text-sm font-semibold text-gray-900 dark:text-white">
-                                    {i18n.t(groupEdit ? 'Configure Group Action Data Elements' : 'Configure Data Elements')}
+                                    {i18n.t('Configure Data Elements')}
                                 </label>
                                 <div className="shadow-md rounded-md p-4 bg-white mb-4">
                                     <label htmlFor="program"
@@ -353,21 +351,20 @@ const ConfigurationComponent = () => {
                                     </label>
                                     <div className="w-full flex flex-col">
                                         <div className="w-3/12 flex flex-col">
-                                            {!configure1 &&
+                                            {!configure &&
                                                 <div>
                                                     <ProgramStageComponent
                                                         selectedProgram={selectedProgram}
                                                         selectedStage={selectedStage}
                                                         filteredStages={Object.keys(configuredStages).filter(s => {
                                                             const stage = configuredStages[s];
-                                                            return ((groupEdit ? stage['groupDataElements'] : stage['dataElements']) || []).length > 0;
+                                                            return ((stage['dataElements']) || []).length > 0;
                                                         })}
                                                         setSelectedStage={(selection) => {
                                                             setSelectedStage(selection);
                                                             if (selection) {
                                                                 setEditing(true);
-                                                                setConfigure2(false);
-                                                                setConfigure1(false);
+                                                                setConfigure(false);
                                                                 setSelectedDataElements([]);
                                                                 setSelectedGroupDataElements([]);
                                                                 setSelectedIndividualDataElements([])
@@ -386,28 +383,19 @@ const ConfigurationComponent = () => {
                                                 </div>
                                             }
                                         </div>
-                                        {(!configure1 && !editing) &&
+                                        {(!configure && !editing) &&
                                             <ConfiguredStagesComponent stages={stages}
                                                                        configuredStages={configuredStages}
-                                                                       groupEdit={groupEdit}
                                                                        onSort={(stage) => {
-                                                                           setConfigure1(true);
+                                                                           setConfigure(true);
                                                                            setEditing(false);
-                                                                           if (groupEdit) {
-                                                                               setSelectedGroupDataElements(configuredStages[stage]['groupDataElements'] || []);
-                                                                           } else {
-                                                                               setSelectedDataElements(configuredStages[stage]['dataElements'] || []);
-                                                                           }
+                                                                           setSelectedDataElements(configuredStages[stage]['dataElements'] || []);
                                                                            setSelectedStage(stage)
                                                                        }}
                                                                        onEdit={(stage) => {
                                                                            setEditing(true);
-                                                                           setConfigure1(false);
-                                                                           if (groupEdit) {
-                                                                               setSelectedGroupDataElements(configuredStages[stage]['groupDataElements'] || []);
-                                                                           } else {
-                                                                               setSelectedDataElements(configuredStages[stage]['dataElements'] || []);
-                                                                           }
+                                                                           setConfigure(false);
+                                                                           setSelectedDataElements(configuredStages[stage]['dataElements'] || []);
                                                                            setSelectedStage(stage)
                                                                        }}/>
                                         }
@@ -420,46 +408,26 @@ const ConfigurationComponent = () => {
                                             configuredStages={configuredStages}
                                             caption={'Select data Elements the will be visible for the selected stage when attending to participants'}
                                             selectedStage={selectedStage}
-                                            checkDataElements={groupEdit ? selectedGroupDataElements : selectedDataElements}
+                                            checkDataElements={selectedDataElements}
                                             configuredCondition={configuredCondition}
                                             setSelectedConfiguredCondition={setSelectedConfiguredCondition}
                                             onSelectAll={(checked) => {
                                                 if (checked) {
-                                                    if (groupEdit) {
-                                                        setSelectedGroupDataElements(dataElements.map(de => de.id))
-                                                    } else {
-                                                        setSelectedDataElements(dataElements.map(de => de.id))
-                                                    }
+                                                    setSelectedDataElements(dataElements.map(de => de.id))
                                                 } else {
-                                                    if (groupEdit) {
-                                                        setSelectedGroupDataElements([])
-                                                    } else {
-                                                        setSelectedDataElements([]);
-                                                    }
+                                                    setSelectedDataElements([]);
                                                 }
                                             }}
                                             onSelect={(de) => {
-                                                if (groupEdit) {
-                                                    if (selectedGroupDataElements?.includes(de)) {
-                                                        setSelectedGroupDataElements(selectedGroupDataElements?.filter(rowId => rowId !== de));
-                                                    } else {
-                                                        setSelectedGroupDataElements([...selectedGroupDataElements, de]);
-                                                    }
+                                                if (selectedDataElements?.includes(de)) {
+                                                    setSelectedDataElements(selectedDataElements?.filter(rowId => rowId !== de));
                                                 } else {
-                                                    if (selectedDataElements?.includes(de)) {
-                                                        setSelectedDataElements(selectedDataElements?.filter(rowId => rowId !== de));
-                                                    } else {
-                                                        setSelectedDataElements([...selectedDataElements, de]);
-                                                    }
+                                                    setSelectedDataElements([...selectedDataElements, de]);
                                                 }
                                             }}
-                                            onDelete={()=> {
+                                            onDelete={() => {
                                                 const stages = configuredStages
-                                                if (groupEdit) {
-                                                    delete stages[selectedStage]['groupDataElement'];
-                                                } else {
-                                                    delete stages[selectedStage]['dataElements'];
-                                                }
+                                                delete stages[selectedStage]['dataElements'];
                                                 if (!stages[selectedStage]['individualDataElements'] &&
                                                     !stages[selectedStage]['dataElements'] &&
                                                     !stages[selectedStage]['groupDataElement']) {
@@ -477,30 +445,29 @@ const ConfigurationComponent = () => {
                                                     [selectedStage]: {
                                                         ...configuredStages[selectedStage],  // Retain existing properties
                                                         individualDataElements: configuredStages[selectedStage]?.individualDataElements || [],
-                                                        dataElements: !groupEdit ? selectedDataElements : configuredStages[selectedStage]?.dataElements || [],
-                                                        groupDataElements: groupEdit ? selectedGroupDataElements : configuredStages[selectedStage]?.groupDataElements || [],
+                                                        dataElements: selectedDataElements
                                                     }
                                                 };
                                                 dataStoreOperation('configuredStages', updatedStages);
 
                                                 // Reset states after saving
                                                 setEditing(false);
-                                                setConfigure1(true);
+                                                setConfigure(true);
                                             }}
                                             onCancel={() => {
                                                 setEditing(false);
-                                                setConfigure1(false);
+                                                setConfigure(false);
                                             }}
                                             stages={stages}
                                         />
                                     </div>
                                 }
-                                {configure1 &&
+                                {configure &&
                                     <div className="w-full flex flex-col pt-2">
                                         <DataElementSortComponent
                                             dataElements={dataElements}
-                                            checkDataElements={groupEdit ? selectedGroupDataElements : selectedDataElements}
-                                            moveDataElement={(from, to) => moveDataElement(groupEdit ? 'group' : 'all', from, to)}
+                                            checkDataElements={selectedDataElements}
+                                            moveDataElement={(from, to) => moveDataElement('all', from, to)}
                                             onClose={() => {
                                                 const stages = configuredStages
                                                 stages[selectedStage] = {
@@ -510,7 +477,7 @@ const ConfigurationComponent = () => {
                                                 };
                                                 setConfiguredStages(stages);
                                                 setSelectedStage('');
-                                                setConfigure1(false);
+                                                setConfigure(false);
                                                 setEditing(false)
 
                                             }}
@@ -520,154 +487,6 @@ const ConfigurationComponent = () => {
                                     </div>
                                 }
                             </div>
-                            {groupEdit &&
-                                <div className="shadow-sm rounded-md p-4 border border-blue-100 bg-white">
-                                    <label htmlFor="program"
-                                           className="block mb-2 text-sm font-semibold text-gray-900 dark:text-white">
-                                        {i18n.t('Configure Individual Data Elements')}
-                                    </label>
-                                    <div className="shadow-md rounded-md p-4 bg-white mb-4">
-                                        <label htmlFor="program"
-                                               className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-                                            {i18n.t('Configured Stages')}
-                                        </label>
-                                        <div className="w-full flex flex-col">
-                                            {!configure2 &&
-                                                <>
-                                                    <div className="w-3/12 flex flex-col">
-                                                        <div>
-                                                            <ProgramStageComponent
-                                                                selectedProgram={selectedProgram}
-                                                                selectedStage={selectedStage}
-                                                                filteredStages={Object.keys(configuredStages).filter(s => {
-                                                                    const stage = configuredStages[s];
-                                                                    return (stage['individualDataElements'] || []).length > 0;
-                                                                })}
-                                                                setSelectedStage={(selection) => {
-                                                                    setSelectedStage(selection);
-                                                                    if (selection) {
-                                                                        setEditing1(true);
-                                                                        setConfigure2(false);
-                                                                        setSelectedDataElements([]);
-                                                                        setSelectedIndividualDataElements([]);
-                                                                        setSelectedGroupDataElements([]);
-
-                                                                        const stages = configuredStages;
-                                                                        const stage = stages[selection];
-                                                                        stages[selection] = {
-                                                                            individualDataElements: stage ? stage['individualDataElements'] || [] : [],
-                                                                            dataElements: stage ? stage['dataElements'] || [] : [],
-                                                                            groupDataElements: stage ? stage['groupDataElements'] || [] : []
-                                                                        };
-                                                                        setConfiguredStages(stages);
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            }
-                                            {!editing1 && !configure2 &&
-                                                <ConfiguredStagesComponent stages={stages}
-                                                                           configuredStages={configuredStages}
-                                                                           single={true}
-                                                                           groupEdit={groupEdit}
-                                                                           onSort={(stage) => {
-                                                                               setConfigure2(true);
-                                                                               setEditing1(false);
-                                                                               setSelectedIndividualDataElements(configuredStages[stage]['individualDataElements'] || []);
-                                                                               setSelectedStage(stage)
-                                                                           }}
-                                                                           onEdit={(stage) => {
-                                                                               setEditing1(true);
-                                                                               setConfigure2(false);
-                                                                               setSelectedIndividualDataElements(configuredStages[stage]['individualDataElements'] || [])
-                                                                               setSelectedStage(stage)
-                                                                           }}/>
-                                            }
-                                        </div>
-                                    </div>
-                                    {editing1 &&
-                                        <div className="w-full flex flex-col pt-2">
-                                            <ConfiguredDataElements
-                                                dataElements={dataElements}
-                                                configuredStages={configuredStages}
-                                                caption={'Select data Elements the will be visible for the selected stage when attending to participants'}
-                                                selectedStage={selectedStage}
-                                                checkDataElements={selectedIndividualDataElements}
-                                                onSelectAll={(checked) => {
-                                                    if (checked) {
-                                                        setSelectedIndividualDataElements(dataElements.map(de => de.id))
-                                                    } else {
-                                                        setSelectedIndividualDataElements([])
-                                                    }
-                                                }}
-                                                onSelect={(de) => {
-                                                    if (selectedIndividualDataElements?.includes(de)) {
-                                                        setSelectedIndividualDataElements(selectedIndividualDataElements?.filter(rowId => rowId !== de));
-                                                    } else {
-                                                        setSelectedIndividualDataElements([...selectedIndividualDataElements, de]);
-                                                    }
-                                                }}
-                                                onDelete={()=> {
-                                                    const stages = configuredStages;
-                                                    delete stages[selectedStage]['individualDataElements'];
-                                                    if (!stages[selectedStage]['individualDataElements'] &&
-                                                        !stages[selectedStage]['dataElements'] &&
-                                                        !stages[selectedStage]['groupDataElement']) {
-                                                        delete stages[selectedStage]
-                                                    }
-                                                    setConfiguredStages(stages);
-                                                    setEditing1(false);
-                                                    setSelectedStage('');
-
-                                                    dataStoreOperation('configuredStages', stages);
-                                                }}
-                                                onSave={() => {
-                                                    const updated = {
-                                                        ...configuredStages,
-                                                        [selectedStage]: {
-                                                            ...configuredStages[selectedStage],  // Retain existing properties
-                                                            individualDataElements: [...selectedIndividualDataElements], // Clone array to prevent reference issues
-                                                        }
-                                                    }
-                                                    dataStoreOperation('configuredStages', updated);
-                                                    setEditing1(false);
-                                                    setConfigure2(true)
-                                                }}
-                                                onCancel={() => {
-                                                    setEditing1(false);
-                                                    setConfigure2(false)
-                                                }}
-                                                stages={stages}
-                                            />
-                                        </div>
-                                    }
-                                    {configure2 &&
-                                        <div className="w-full flex flex-col pt-2">
-                                            <DataElementSortComponent
-                                                dataElements={dataElements}
-                                                checkDataElements={selectedIndividualDataElements}
-                                                moveDataElement={(from, to) => moveDataElement('individual', from, to)}
-                                                onClose={() => {
-                                                    const stages = configuredStages
-                                                    stages[selectedStage] = {
-                                                        dataElements: selectedDataElements,
-                                                        individualDataElements: selectedIndividualDataElements,
-                                                        groupDataElements: selectedGroupDataElements
-                                                    };
-                                                    setConfiguredStages(stages);
-                                                    setSelectedStage('');
-                                                    setConfigure2(false);
-                                                    setEditing1(false);
-                                                }}
-                                                stages={stages}
-                                                selectedStage={selectedStage}
-                                            />
-                                        </div>
-                                    }
-                                </div>
-                            }
                         </div>
                     </div>
                 </div>

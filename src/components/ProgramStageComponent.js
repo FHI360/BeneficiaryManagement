@@ -13,7 +13,13 @@ const query = {
     }
 }
 
-const ProgramStageComponent = ({selectedProgram, selectedStage, setSelectedStage, filteredStages = []}) => {
+const ProgramStageComponent = ({
+                                   selectedProgram,
+                                   selectedStage,
+                                   setSelectedStage,
+                                   filteredStages = [],
+                                   includeStages
+                               }) => {
     const program = selectedProgram || '-';
     const {error: error, data: data, refetch} = useDataQuery(query, {variables: {program}});
 
@@ -39,7 +45,10 @@ const ProgramStageComponent = ({selectedProgram, selectedStage, setSelectedStage
                     value={selectedStage}
                     onChange={handleStageChange}>
                 <option selected>Choose a program stage</option>
-                {data?.programStages?.programStages?.filter(s => !(filteredStages || []).includes(s.id)).map(({id, displayName}) => (
+                {data?.programStages?.programStages?.filter(s => {
+                    return (filteredStages && filteredStages.length > 0 && !filteredStages.includes(s.id))
+                       || (includeStages && includeStages.length > 0 && includeStages.includes(s.id))
+                }).map(({id, displayName}) => (
                         <option label={displayName} value={id} key={id}/>
                     )
                 )}
@@ -51,6 +60,7 @@ export default ProgramStageComponent;
 
 ProgramStageComponent.propTypes = {
     filteredStages: PropTypes.array,
+    includeStages: PropTypes.array,
     selectedProgram: PropTypes.string,
     selectedStage: PropTypes.string,
     setSelectedStage: PropTypes.func

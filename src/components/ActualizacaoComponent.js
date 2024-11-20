@@ -10,7 +10,10 @@ export const ActualizacaoComponent = ({
                                           dataElements,
                                           groupDataElementValue,
                                           dataElementValue,
-                                          valueChange
+                                          valueChange,
+                                          selectedStage,
+                                          conditions,
+                                          values
                                       }) => {
 
     const initialValue = (entity, item) => {
@@ -62,6 +65,9 @@ export const ActualizacaoComponent = ({
                                             value={group ? groupDataElementValue(de.id) : dataElementValue(date, de.id, entity)}
                                             dataElement={de}
                                             labelVisible={false}
+                                            stage={selectedStage}
+                                            conditions={conditions}
+                                            values={values}
                                             valueChanged={(d, v) => {
                                                 ACTUALIZACAO_OPTIONS.initial
                                                     .map((i) => {
@@ -89,10 +95,13 @@ export const ActualizacaoComponent = ({
 
 ActualizacaoComponent.propTypes = {
     dataElements: PropTypes.array.isRequired,
+    conditions: PropTypes.array,
     dataElementValue: PropTypes.func,
     dates: PropTypes.array,
     entity: PropTypes.object,
     group: PropTypes.bool,
     groupDataElementValue: PropTypes.func,
-    valueChange: PropTypes.func
+    selectedStage: PropTypes.string,
+    valueChange: PropTypes.func,
+    values: PropTypes.object
 };

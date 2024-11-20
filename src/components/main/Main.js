@@ -166,7 +166,7 @@ export const Main = () => {
         }
         setOriginalEdits([]);
         setEdits([]);
-    }, [elementsData, selectedStage]);
+    }, [elementsData, selectedStage, toggle]);
 
     useEffect(() => {
         if (orgUnit && selectedProgram) {
@@ -334,6 +334,41 @@ export const Main = () => {
         return null;
     }
 
+    const entityValues = (date, entity) => {
+        let event = entity.enrollments[0].events?.find(event => event.programStage === selectedStage
+            && formatDate(event.occurredAt) === formatDate(date.toISOString()));
+        const activeEvent = entity.enrollments[0].events?.find(event => event.programStage === selectedStage);
+        const editedEntity = edits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
+
+        if (activeEvent && !repeatable) {
+            event = activeEvent;
+        }
+        if (event) {
+            if (editedEntity && editedEntity.values.some(v => formatDate(v.date) === formatDate(date))) {
+                return editedEntity.values.map(v => {
+                    return {
+                        [v.dataElement.id]: formatDate(date) === formatDate(v.date) ? v.value : ''
+                    }
+                })
+            } else {
+                return event.dataValues.map(v => {
+                    return {
+                        [v.dataElement]: formatDate(date) === formatDate(v.date) ? v.value : ''
+                    }
+                })
+            }
+
+        } else if (editedEntity) {
+            return editedEntity.values.map(v => {
+                return {
+                    [v.dataElement.id]: formatDate(date) === formatDate(v.date) ? v.value : ''
+                }
+            })
+        }else {
+            return {}
+        }
+    }
+
     const saveEdits = () => {
         setSaving(true);
         const events = [];
@@ -397,7 +432,8 @@ export const Main = () => {
                     }
                 });
 
-                (groupEdit && configuredStages[selectedStage] && configuredStages[selectedStage]['groupDataElements'] || []).map(de => {
+                (groupEdit && configuredStages[selectedStage] && configuredStages[selectedStage]['dataElements'] || []).map(de => {
+                    console.log('DE', de)
                     return {
                         dataElement: de,
                         value: groupDataElementValue(de)
@@ -435,6 +471,8 @@ export const Main = () => {
         }).then((response) => {
             if (response.status === 'OK') {
                 setEdits([]);
+                setSelectedEntities([]);
+                setGroupValues({});
                 setSaving(false);
                 setPage(1);
                 setToggle((prev) => !prev);
@@ -442,6 +480,9 @@ export const Main = () => {
             } else {
                 show({msg: i18n.t('There was an error updating records'), type: 'error'});
             }
+        }).catch(_ => {
+            show({msg: i18n.t('There was an error updating records'), type: 'error'});
+            setSaving(false);
         });
     }
 
@@ -563,31 +604,34 @@ export const Main = () => {
     }
 
     const checkForCondition = async (entity, date, dataElement, value) => {
-        if (!groupEdit) {
-            createOrUpdateEvent(entity, date, dataElement, value);
-        } else {
-            createOrUpdateGroupValue(dataElement, value);
+        const stageHasRule = (configuredCondition || []).some(condition => condition.selectedStage === selectedStage)
+
+        const defaultUpdate = () => {
+            if (!groupEdit) {
+                createOrUpdateEvent(entity, date, dataElement, value);
+            } else {
+                createOrUpdateGroupValue(dataElement, value);
+            }
         }
         // Ensure that data is available
-        if (!configuredCondition || !dataElements || !selectedStage) {
+        if (!stageHasRule) {
+            defaultUpdate()
             return;
         }
 
         const equals = configuredCondition.filter(condition => condition.operator === 'equals');
-
         if (equals && equals.length > 0) {
             const programStageRules = equals.filter(condition => condition.selectedStage === selectedStage);
             const dataElementRules = programStageRules.filter(condition => condition.dataElement_one === dataElement.id);
-
             if (dataElementRules.length > 0) {
                 for (const rule of dataElementRules) {
                     const dataElementTwo = rule.dataElement_two || '';
                     const checkForDataElementTwo = dataElements.find(item => item.id === dataElementTwo);
 
                     if (checkForDataElementTwo) {
-                        const equalsToValue = rule.equals_to.toLowerCase() === "true";
+                        const equalsToValue = rule.equals_to?.toLowerCase() === "true";
 
-                        if (equalsToValue === value) {
+                        if (equalsToValue === value && rule.action === 'assign') {
 
                             if (!groupEdit) {
                                 // Await the first createOrUpdateEvent call
@@ -602,47 +646,25 @@ export const Main = () => {
                         }
                     }
                 }
+            } else {
+                defaultUpdate();
             }
         } else {
-            await createOrUpdateEvent(entity, date, dataElement, value);
-        }
-
-        const lessThan = configuredCondition.filter(condition => condition.operator === 'lessThan');
-
-        if (lessThan && lessThan.length > 0) {
-            const programStageRules = lessThan.filter(condition => condition.selectedStage === selectedStage);
-            const dataElementRules = programStageRules.filter(condition => condition.dataElement_one === dataElement.id);
-
-            if (dataElementRules.length > 0) {
-                for (const rule of dataElementRules) {
-                    const dataElementTwo = rule.dataElement_two || '';
-                    const checkForDataElementTwo = dataElements.find(item => item.id === dataElementTwo);
-
-                    if (checkForDataElementTwo) {
-                        const equalsToValue = rule.equals_to.toLowerCase() === "true";
-
-                        if (equalsToValue === value) {
-
-                            if (!groupEdit) {
-                                // Await the first createOrUpdateEvent call
-                                createOrUpdateEvent(entity, date, checkForDataElementTwo, rule.value_text);
-
-                                // Run the second createOrUpdateEvent after the first completes
-                                createOrUpdateEvent(entity, date, dataElement, value);
-                            } else {
-                                createOrUpdateGroupValue(dataElement, value);
-                                createOrUpdateGroupValue(checkForDataElementTwo, rule.value_text);
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
-            await createOrUpdateEvent(entity, date, dataElement, value);
+            defaultUpdate();
         }
     };
 
+    const availableStages = () => {
+        const stages = [];
+        Array.from(Object.keys(configuredStages)).forEach(id => {
+            const stage = configuredStages[id];
+            if (stage.dataElements && stage.dataElements.length > 0) {
+                stages.push(id);
+            }
+        });
 
+        return stages;
+    }
     return (
         <>
             <div className="flex flex-row w-full h-full">
@@ -688,6 +710,7 @@ export const Main = () => {
                                                                 <ProgramStageComponent
                                                                     selectedProgram={selectedProgram}
                                                                     selectedStage={selectedStage}
+                                                                    includeStages={availableStages()}
                                                                     setSelectedStage={(stage) => {
                                                                         setSelectedStage(stage)
                                                                         setSelectedSharedStage(stage)
@@ -775,12 +798,13 @@ export const Main = () => {
                                                                             className="checkbox"/>
                                                                         <label
                                                                             className="pl-2 pt-2 label">
-                                                                            {i18n.t('Group Action?')}
+                                                                            {i18n.t('Group Action?')} <span
+                                                                            className="text-xs italic">Action will apply to all selected attendees</span>
                                                                         </label>
                                                                     </div>
                                                                 </div>
                                                             }
-                                                            {groupEdit && selectedStage && dataElements.length > 0 && configuredStages[selectedStage] && (configuredStages[selectedStage]['groupDataElements'] || []).length > 0 &&
+                                                            {groupEdit && selectedStage && dataElements.length > 0 && configuredStages[selectedStage] && (configuredStages[selectedStage]['dataElements'] || []).length > 0 &&
                                                                 <div className="w-full flex flex-col pt-2">
                                                                     <div
                                                                         className="p-8 mt-6 lg:mt-0 rounded shadow bg-white">
@@ -809,7 +833,7 @@ export const Main = () => {
                                                                             className="relative overflow-x-auto shadow-md sm:rounded-lg">
                                                                             <div
                                                                                 className={selectedStage === REFERENCIAS ? 'w-8/12 p-2' : 'w-3/12 p-2'}>
-                                                                                {![REFERENCIAS, ACTUALIZACAO].includes(selectedStage) && dataElements.length > 0 && configuredStages[selectedStage] && (configuredStages[selectedStage]['groupDataElements'] || []).map((cde, idx) => {
+                                                                                {![REFERENCIAS, ACTUALIZACAO].includes(selectedStage) && dataElements.length > 0 && configuredStages[selectedStage] && (configuredStages[selectedStage]['dataElements'] || []).map((cde, idx) => {
                                                                                     const de = dataElements.find(de => de.id === cde);
                                                                                     return <>
                                                                                         {de &&
@@ -817,6 +841,9 @@ export const Main = () => {
                                                                                                 key={idx}
                                                                                                 value={groupDataElementValue(cde)}
                                                                                                 dataElement={de}
+                                                                                                values={groupValues}
+                                                                                                stage={selectedStage}
+                                                                                                conditions={configuredCondition}
                                                                                                 labelVisible={true}
                                                                                                 valueChanged={(dataElement, value) => checkForCondition(null, null, dataElement, value)}/>
                                                                                         }
@@ -849,6 +876,9 @@ export const Main = () => {
                                                                                             group={true}
                                                                                             groupDataElementValue={groupDataElementValue}
                                                                                             dataElements={dataElements}
+                                                                                            stage={selectedStage}
+                                                                                            conditions={configuredCondition}
+                                                                                            values={groupValues}
                                                                                             valueChange={(e, d, dataElement, value) => checkForCondition(null, null, dataElement, value)}/>
                                                                                         </tbody>
                                                                                     </table>
@@ -889,6 +919,9 @@ export const Main = () => {
                                                                                                 group={true}
                                                                                                 groupDataElementValue={groupDataElementValue}
                                                                                                 dataElements={dataElements}
+                                                                                                stage={selectedStage}
+                                                                                                conditions={configuredCondition}
+                                                                                                values={groupValues}
                                                                                                 valueChange={(e, d, dataElement, value) => checkForCondition(null, null, dataElement, value)}/>
                                                                                         </tr>
                                                                                         </tbody>
@@ -896,12 +929,13 @@ export const Main = () => {
                                                                                 }
                                                                             </div>
                                                                         </div>
-                                                                        {configuredStages[selectedStage] && (configuredStages[selectedStage]['groupDataElements'] || []).length > 0 &&
-                                                                            <div className="flex flex-row justify-end">
+                                                                        {configuredStages[selectedStage] && (configuredStages[selectedStage]['dataElements'] || []).length > 0 &&
+                                                                            <div
+                                                                                className="flex flex-row justify-end pt-2">
                                                                                 <button type="button"
                                                                                         className="primary-btn"
-                                                                                        onClick={() => setModalShow(true)}>Save
-                                                                                    Event
+                                                                                        onClick={() => setModalShow(true)}>
+                                                                                    Create Event Template
                                                                                 </button>
                                                                             </div>
                                                                         }
@@ -930,10 +964,16 @@ export const Main = () => {
                                                                                         <button type="button"
                                                                                                 className={saving || loading ? 'primary-btn-disabled' : 'primary-btn'}
                                                                                                 onClick={saveEdits}>
-                                                                                            {(saving || loading) &&
-                                                                                                <SpinnerComponent/>
-                                                                                            }
-                                                                                            Save Records
+                                                                                            <div
+                                                                                                className="flex flex-row">
+                                                                                                {(saving || loading) &&
+                                                                                                    <div
+                                                                                                        className="pr-2">
+                                                                                                        <SpinnerComponent/>
+                                                                                                    </div>
+                                                                                                }
+                                                                                                <span>Save Records</span>
+                                                                                            </div>
                                                                                         </button>
                                                                                     </div>
                                                                                 }
@@ -959,7 +999,7 @@ export const Main = () => {
                                                                                                     type="checkbox"
                                                                                                     onChange={(event) => {
                                                                                                         if (event.target.checked) {
-                                                                                                            setSelectedEntities(allEntities)
+                                                                                                            setSelectedEntities(entities)
                                                                                                         } else {
                                                                                                             setSelectedEntities([])
                                                                                                             setEdits([])
@@ -1069,22 +1109,11 @@ export const Main = () => {
                                                                                                             onChange={() => {
                                                                                                                 if (selectedEntities.map(e => e.trackedEntity).includes(entity.trackedEntity)) {
                                                                                                                     setSelectedEntities(selectedEntities.filter(rowId => rowId.trackedEntity !== entity.trackedEntity));
-                                                                                                                    setEdits(edits.filter(edit => edit.entity.trackedEntity !== entity.trackedEntity))
                                                                                                                 } else {
                                                                                                                     setSelectedEntities([...selectedEntities, entity]);
-
-                                                                                                                    let currentEdit = edits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
-                                                                                                                    if (!currentEdit) {
-                                                                                                                        currentEdit = {
-                                                                                                                            entity
-                                                                                                                        };
-                                                                                                                    }
-                                                                                                                    const sample = edits[0];
-                                                                                                                    if (sample) {
-                                                                                                                        currentEdit.values = sample.values;
-
-                                                                                                                        setEdits([...edits, currentEdit]);
-                                                                                                                    }
+                                                                                                                }
+                                                                                                                if (edits.map(e => e.entity.trackedEntity).includes(entity.trackedEntity)) {
+                                                                                                                    setEdits(edits.filter(rowId => rowId.entity.trackedEntity !== entity.trackedEntity));
                                                                                                                 }
                                                                                                             }}
                                                                                                             className="checkbox"/>
@@ -1129,6 +1158,9 @@ export const Main = () => {
                                                                                                                                         value={dataElementValue(date, de.id, entity)}
                                                                                                                                         dataElement={de}
                                                                                                                                         labelVisible={true}
+                                                                                                                                        stage={selectedStage}
+                                                                                                                                        conditions={configuredCondition}
+                                                                                                                                        values={entityValues(date, entity)}
                                                                                                                                         valueChanged={(dataElement, value) => checkForCondition(entity, date, de, value)}/>
                                                                                                                                 }
                                                                                                                             </>
@@ -1151,6 +1183,9 @@ export const Main = () => {
                                                                                                                                     value={dataElementValue(date, de.id, entity)}
                                                                                                                                     dataElement={de}
                                                                                                                                     labelVisible={false}
+                                                                                                                                    stage={selectedStage}
+                                                                                                                                    conditions={configuredCondition}
+                                                                                                                                    values={entityValues(date, entity)}
                                                                                                                                     valueChanged={(dataElement, value) => checkForCondition(entity, date, de, value)}/>
                                                                                                                             </div>
                                                                                                                         }
@@ -1166,6 +1201,9 @@ export const Main = () => {
                                                                                                             entity={entity}
                                                                                                             dataElementValue={dataElementValue}
                                                                                                             dataElements={dataElements}
+                                                                                                            stage={selectedStage}
+                                                                                                            conditions={configuredCondition}
+                                                                                                            values={entityValues(date, entity)}
                                                                                                             valueChange={createOrUpdateEvent}/>
                                                                                                     </>
                                                                                                 }
@@ -1177,6 +1215,9 @@ export const Main = () => {
                                                                                                 entity={entity}
                                                                                                 dataElementValue={dataElementValue}
                                                                                                 dataElements={dataElements}
+                                                                                                stage={selectedStage}
+                                                                                                conditions={configuredCondition}
+                                                                                                values={entityValues(startDate, entity)}
                                                                                                 valueChange={createOrUpdateEvent}/>
                                                                                         }
                                                                                     </>

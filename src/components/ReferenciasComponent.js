@@ -3,7 +3,7 @@ import React from 'react';
 import { REFERENCIAS_OPTIONS } from '../consts.js';
 import { DataElementComponent } from './DataElement.js';
 
-export const ReferenciasComponent = ({group, entity, dates, dataElements, groupDataElementValue, dataElementValue, valueChange}) => {
+export const ReferenciasComponent = ({group, entity, dates, dataElements, groupDataElementValue, dataElementValue, valueChange, stage, values, conditions}) => {
     return(
     <>
         {REFERENCIAS_OPTIONS.filter(option => option.active).map(option => {
@@ -25,6 +25,9 @@ export const ReferenciasComponent = ({group, entity, dates, dataElements, groupD
                                                    value={group ? groupDataElementValue(de.id) : dataElementValue(date, de.id, entity)}
                                                    dataElement={de}
                                                    labelVisible={false}
+                                                   stage={stage}
+                                                   conditions={conditions}
+                                                   values={values}
                                                    valueChanged={(d, v) => valueChange(entity, date, de, v)}/>
                                            </div>
                                        }
@@ -43,6 +46,9 @@ export const ReferenciasComponent = ({group, entity, dates, dataElements, groupD
                                                    value={group ? groupDataElementValue(de.id) : dataElementValue(date, de.id, entity)}
                                                    dataElement={de}
                                                    labelVisible={false}
+                                                   stage={stage}
+                                                   conditions={conditions}
+                                                   values={values}
                                                    valueChanged={(d, v) => valueChange(entity, date, de, v)}/>
                                            </div>
                                        }
@@ -61,11 +67,14 @@ export const ReferenciasComponent = ({group, entity, dates, dataElements, groupD
 }
 
 ReferenciasComponent.propTypes = {
+    conditions: PropTypes.array,
     dataElementValue: PropTypes.func,
     dataElements: PropTypes.array,
     dates: PropTypes.array,
     entity: PropTypes.object,
     group: PropTypes.bool,
     groupDataElementValue: PropTypes.func,
-    valueChange: PropTypes.func
+    stage: PropTypes.string,
+    valueChange: PropTypes.func,
+    values: PropTypes.object
 }
