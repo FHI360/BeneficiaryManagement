@@ -479,6 +479,13 @@ export const applyConditionAction = (conditions, stage, dataElement, values, val
                         }
                     }
                 }
+                if (condition.action === 'mark_invalid') {
+                    if (condition.operator === 'is_not_empty' && !value &&  values[dataElementOne]) {
+                        return {
+                            action: condition.action
+                        }
+                    }
+                }
             }
         }
     }

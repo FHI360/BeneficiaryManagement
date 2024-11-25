@@ -15,7 +15,8 @@ export const DataElementComponent = ({
                                          conditions,
                                          valueChanged,
                                          readonly,
-                                         optionAdd = true
+                                         optionAdd = true,
+                                         setInvalid = (valid) => {}
                                      }) => {
     const engine = useDataEngine();
 
@@ -61,6 +62,11 @@ export const DataElementComponent = ({
             setWarning(true);
         } else {
             setWarning(false);
+        }
+        if (condition.action === 'mark_invalid') {
+            setInvalid(true);
+        } else {
+            setInvalid(false)
         }
     }, [values, conditions, stage, dataElement, elementValue]);
 
@@ -314,8 +320,9 @@ DataElementComponent.propTypes = {
     labelVisible: PropTypes.bool,
     optionAdd: PropTypes.bool,
     readonly: PropTypes.bool,
+    setInvalid: PropTypes.func,
     stage: PropTypes.bool,
     value: PropTypes.string,
     valueChanged: PropTypes.func,
-    values: PropTypes.object,
+    values: PropTypes.object
 };

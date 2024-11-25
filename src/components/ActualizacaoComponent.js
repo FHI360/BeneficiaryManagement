@@ -13,7 +13,8 @@ export const ActualizacaoComponent = ({
                                           valueChange,
                                           selectedStage,
                                           conditions,
-                                          values
+                                          values,
+                                          setInvalid
                                       }) => {
 
     const initialValue = (entity, item) => {
@@ -81,6 +82,7 @@ export const ActualizacaoComponent = ({
                                                 valueChange(entity, date, de, v);
                                             }
                                             }
+                                            setInvalid={(invalid) => setInvalid(invalid)}
                                         />
                                     </div>
                                 </td>
@@ -102,6 +104,7 @@ ActualizacaoComponent.propTypes = {
     group: PropTypes.bool,
     groupDataElementValue: PropTypes.func,
     selectedStage: PropTypes.string,
+    setInvalid: PropTypes.func,
     valueChange: PropTypes.func,
     values: PropTypes.object
 };

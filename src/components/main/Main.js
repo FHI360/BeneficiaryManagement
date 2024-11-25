@@ -2,7 +2,6 @@ import { useAlert, useDataEngine, useDataQuery } from '@dhis2/app-runtime';
 import i18n from '@dhis2/d2-i18n';
 import { CalendarInput, Modal, ModalActions, ModalContent, ModalTitle, Pagination } from '@dhis2/ui';
 import classnames from 'classnames';
-import classes from '../../App.module.css'
 import React, { useContext, useEffect, useState } from 'react';
 import { ACTUALIZACAO, ACTUALIZACAO_OPTIONS, config, REFERENCIAS, REFERENCIAS_OPTIONS } from '../../consts.js';
 import {
@@ -71,6 +70,7 @@ export const Main = () => {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [toggle, setToggle] = useState(false);
+    const [invalid, setInvalid] = useState(false);
     const [configuredCondition, setSelectedConfiguredCondition] = useState([]);
 
     const {show} = useAlert(
@@ -335,39 +335,18 @@ export const Main = () => {
         return null;
     }
 
-    const entityValues = (date, entity) => {
-        let event = entity.enrollments[0].events?.find(event => event.programStage === selectedStage
-            && formatDate(event.occurredAt) === formatDate(date.toISOString()));
-        const activeEvent = entity.enrollments[0].events?.find(event => event.programStage === selectedStage);
-        const editedEntity = edits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
+    const entityValues = (entity) => {
+        const edit = edits.find(edit => edit.entity.trackedEntity === entity.trackedEntity);
+        if (edit) {
+            const values = {};
+            edit.values.forEach(value => {
+                values [value.dataElement.id]= value.value
+            });
 
-        if (activeEvent && !repeatable) {
-            event = activeEvent;
+            return values;
         }
-        if (event) {
-            if (editedEntity && editedEntity.values.some(v => formatDate(v.date) === formatDate(date))) {
-                return editedEntity.values.map(v => {
-                    return {
-                        [v.dataElement.id]: formatDate(date) === formatDate(v.date) ? v.value : ''
-                    }
-                })
-            } else {
-                return event.dataValues.map(v => {
-                    return {
-                        [v.dataElement]: formatDate(date) === formatDate(v.date) ? v.value : ''
-                    }
-                })
-            }
 
-        } else if (editedEntity) {
-            return editedEntity.values.map(v => {
-                return {
-                    [v.dataElement.id]: formatDate(date) === formatDate(v.date) ? v.value : ''
-                }
-            })
-        }else {
-            return {}
-        }
+        return {};
     }
 
     const saveEdits = () => {
@@ -434,7 +413,6 @@ export const Main = () => {
                 });
 
                 (groupEdit && configuredStages[selectedStage] && configuredStages[selectedStage]['dataElements'] || []).map(de => {
-                    console.log('DE', de)
                     return {
                         dataElement: de,
                         value: groupDataElementValue(de)
@@ -846,7 +824,8 @@ export const Main = () => {
                                                                                                 stage={selectedStage}
                                                                                                 conditions={configuredCondition}
                                                                                                 labelVisible={true}
-                                                                                                valueChanged={(dataElement, value) => checkForCondition(null, null, dataElement, value)}/>
+                                                                                                valueChanged={(dataElement, value) => checkForCondition(null, null, dataElement, value)}
+                                                                                                setInvalid={(invalid) => setInvalid(invalid)}/>
                                                                                         }
                                                                                     </>
                                                                                 })}
@@ -880,7 +859,8 @@ export const Main = () => {
                                                                                             stage={selectedStage}
                                                                                             conditions={configuredCondition}
                                                                                             values={groupValues}
-                                                                                            valueChange={(e, d, dataElement, value) => checkForCondition(null, null, dataElement, value)}/>
+                                                                                            valueChange={(e, d, dataElement, value) => checkForCondition(null, null, dataElement, value)}
+                                                                                            setInvalid={(invalid) => setInvalid(invalid)}/>
                                                                                         </tbody>
                                                                                     </table>
                                                                                 }
@@ -923,7 +903,8 @@ export const Main = () => {
                                                                                                 stage={selectedStage}
                                                                                                 conditions={configuredCondition}
                                                                                                 values={groupValues}
-                                                                                                valueChange={(e, d, dataElement, value) => checkForCondition(null, null, dataElement, value)}/>
+                                                                                                valueChange={(e, d, dataElement, value) => checkForCondition(null, null, dataElement, value)}
+                                                                                                setInvalid={(invalid) => setInvalid(invalid)}/>
                                                                                         </tr>
                                                                                         </tbody>
                                                                                     </table>
@@ -963,7 +944,8 @@ export const Main = () => {
                                                                                     <div
                                                                                         className="w-9/12 flex flex-row justify-end">
                                                                                         <button type="button"
-                                                                                                className={saving || loading ? 'primary-btn-disabled' : 'primary-btn'}
+                                                                                                className={saving || loading || invalid ? 'primary-btn-disabled' : 'primary-btn'}
+                                                                                                disabled={saving || loading || invalid}
                                                                                                 onClick={saveEdits}>
                                                                                             <div
                                                                                                 className="flex flex-row">
@@ -1161,8 +1143,9 @@ export const Main = () => {
                                                                                                                                         labelVisible={true}
                                                                                                                                         stage={selectedStage}
                                                                                                                                         conditions={configuredCondition}
-                                                                                                                                        values={entityValues(date, entity)}
-                                                                                                                                        valueChanged={(dataElement, value) => checkForCondition(entity, date, de, value)}/>
+                                                                                                                                        values={entityValues(entity)}
+                                                                                                                                        valueChanged={(dataElement, value) => checkForCondition(entity, date, de, value)}
+                                                                                                                                        setInvalid={(invalid) => setInvalid(invalid)}/>
                                                                                                                                 }
                                                                                                                             </>
                                                                                                                         })}
@@ -1186,8 +1169,9 @@ export const Main = () => {
                                                                                                                                     labelVisible={false}
                                                                                                                                     stage={selectedStage}
                                                                                                                                     conditions={configuredCondition}
-                                                                                                                                    values={entityValues(date, entity)}
-                                                                                                                                    valueChanged={(dataElement, value) => checkForCondition(entity, date, de, value)}/>
+                                                                                                                                    values={entityValues(entity)}
+                                                                                                                                    valueChanged={(dataElement, value) => checkForCondition(entity, date, de, value)}
+                                                                                                                                    setInvalid={(invalid) => setInvalid(invalid)}/>
                                                                                                                             </div>
                                                                                                                         }
                                                                                                                     </td>
@@ -1204,8 +1188,9 @@ export const Main = () => {
                                                                                                             dataElements={dataElements}
                                                                                                             stage={selectedStage}
                                                                                                             conditions={configuredCondition}
-                                                                                                            values={entityValues(date, entity)}
-                                                                                                            valueChange={createOrUpdateEvent}/>
+                                                                                                            values={entityValues(entity)}
+                                                                                                            valueChange={createOrUpdateEvent}
+                                                                                                            setInvalid={(invalid) => setInvalid(invalid)}/>
                                                                                                     </>
                                                                                                 }
                                                                                             })}
@@ -1218,8 +1203,9 @@ export const Main = () => {
                                                                                                 dataElements={dataElements}
                                                                                                 stage={selectedStage}
                                                                                                 conditions={configuredCondition}
-                                                                                                values={entityValues(startDate, entity)}
-                                                                                                valueChange={createOrUpdateEvent}/>
+                                                                                                values={entityValues(entity)}
+                                                                                                valueChange={createOrUpdateEvent}
+                                                                                                setInvalid={(invalid) => setInvalid(invalid)}/>
                                                                                         }
                                                                                     </>
                                                                                 })}

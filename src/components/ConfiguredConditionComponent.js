@@ -45,6 +45,7 @@ const ConfigureCondition = ({
     const [selectedVariable1, setSelectedVariable1] = useState("");
     const [selectedVariable2, setSelectedVariable2] = useState("");
     const [selectedOperator, setSelectedOperator] = useState("");
+    const [secondaryOperator, setSecondaryOperator] = useState("");
     const [selectedAction, setSelectedAction] = useState("");
     const [value_text, set_value_text] = useState("")
     const [equals_value_text, set_equals_value_text] = useState("")
@@ -276,6 +277,48 @@ const ConfigureCondition = ({
                 }
             }
 
+            if (selectedOperator === 'is_not_empty') {
+                if (selectedVariable1.length > 0 &&
+                    selectedVariable2.length > 0 &&
+                    selectedAction.length > 0 &&
+                    selectedOperator.length > 0 &&
+                    secondaryOperator.length > 0) {
+                    const condition =
+                        {
+                            "selectedStage": selectedStage || '',
+                            "dataElement": selectedCondition,
+                            "conditionID": selectedCondition + "_" + generateRandomId(),
+                            "dataElement_one": selectedVariable1,
+                            "dataElement_two": selectedVariable2,
+                            "operator": selectedOperator,
+                            "action": selectedAction,
+                            secondaryOperator
+                        }
+                    setCondition(condition)
+
+                    // Check if an identical condition exists in the array
+                    const conditionExists = configuredCondition.find(condition =>
+                        condition.dataElement === selectedCondition &&
+                        condition.dataElement_one === selectedVariable1 &&
+                        condition.dataElement_two === selectedVariable2 &&
+                        condition.operator === selectedOperator &&
+                        condition.value_text === value_text &&
+                        condition.action === selectedAction &&
+                        condition.secondaryOperator === secondaryOperator
+                    );
+                    if (conditionExists === false) {
+                        show({msg: `An identical condition already exists:`, type: 'warning'})
+
+                    }
+                    setConditionExists(!conditionExists)
+                    setTriggerSaving_(prev => !prev)
+
+                } else {
+                    console.log("No missing field is allowed")
+                    return
+                }
+            }
+
         }
     }, [saveCondition]);
 
@@ -297,8 +340,12 @@ const ConfigureCondition = ({
             "value": "between"
         },
         {
-            "label": "is_empty",
+            "label": "is empty",
             "value": "is_empty"
+        },
+        {
+            "label": "is not empty",
+            "value": "is_not_empty"
         }
     ]
 
@@ -322,6 +369,10 @@ const ConfigureCondition = ({
         {
             "label": "Show Warning",
             "value": "show_warning"
+        },
+        {
+            "label": "Mark invalid",
+            "value": "mark_invalid"
         }
     ]
 
@@ -375,6 +426,7 @@ const ConfigureCondition = ({
         setSelectedVariable1("")
         setSelectedVariable2("")
         setSelectedOperator("")
+        setSecondaryOperator('')
         setSelectedAction("")
         set_value_text("")
         set_equals_value_text("")
@@ -402,7 +454,6 @@ const ConfigureCondition = ({
         console.log(condition_id, "Delete Condition from Conditions")
     }
     const handleActionDataElement = (selected, variable) => {
-
         if (variable === 'var1') {
             setSelectedVariable1(selected);
         }
@@ -415,6 +466,10 @@ const ConfigureCondition = ({
             }
 
             setSelectedOperator(selected)
+        }
+        if (variable == 'secondaryOperator') {
+
+            setSecondaryOperator(selected)
         }
         if (variable == 'action') {
             setSelectedAction(selected)
@@ -860,6 +915,121 @@ const ConfigureCondition = ({
                                             ))}
                                         </SingleSelect>
 
+
+                                    </TableCell>
+                                    <TableCell>
+
+
+                                        <SingleSelect
+                                            filterable
+                                            noMatchText="No data element found"
+                                            placeholder="Select .."
+                                            selected={selectedAction}
+                                            value={selectedAction}
+                                            onChange={({selected}) => handleActionDataElement(selected, "action")}
+                                            // disabled={disabled}
+                                        >
+                                            {actions.map(action => (
+                                                <SingleSelectOption key={action.value} label={action.label}
+                                                                    value={action.value}/>
+                                            ))}
+                                        </SingleSelect>
+                                    </TableCell>
+
+                                </TableRow>
+
+
+                            </TableBody>
+                        </Table>}
+
+                        {selectedOperator === 'is_not_empty' && <Table
+                            className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+
+                            <TableHead
+                                className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                                <TableRowHead className="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+                                    <TableCellHead>Variable 1</TableCellHead>
+                                    <TableCellHead>Operator 1</TableCellHead>
+                                    <TableCellHead>Variable 2</TableCellHead>
+                                    <TableCellHead>Operator 2</TableCellHead>
+                                    <TableCellHead>Action</TableCellHead>
+                                </TableRowHead>
+                            </TableHead>
+                            <TableBody>
+
+
+                                <TableRow>
+                                    <TableCell>
+
+                                        <SingleSelect
+                                            filterable
+                                            noMatchText="No data element found"
+                                            placeholder="Select .. "
+                                            selected={selectedVariable1 || ""}
+                                            value={selectedVariable1 || ""}
+                                            onChange={({selected}) => handleActionDataElement(selected, "var1")}
+                                            // disabled={disabled}
+                                        >
+                                            {selectedKeysReady.map(de => (
+                                                <SingleSelectOption key={de.value} label={de.label} value={de.value}/>
+                                            ))}
+                                        </SingleSelect>
+
+                                    </TableCell>
+                                    <TableCell>
+
+                                        <SingleSelect
+                                            filterable
+                                            noMatchText="No operator found"
+                                            placeholder="Select .. "
+                                            selected={selectedOperator}
+                                            value={selectedOperator}
+                                            onChange={({selected}) => handleActionDataElement(selected, "operator")}
+                                            // disabled={disabled}
+                                        >
+                                            {operators.map(operator => (
+                                                <SingleSelectOption key={operator.value} label={operator.label}
+                                                                    value={operator.value}/>
+                                            ))}
+                                        </SingleSelect>
+
+
+                                    </TableCell>
+                                    <TableCell>
+
+
+                                        <SingleSelect
+                                            filterable
+                                            noMatchText="No data element found"
+                                            placeholder="Select .."
+                                            selected={selectedVariable2 || ""}
+                                            value={selectedVariable2 || ""}
+                                            onChange={({selected}) => handleActionDataElement(selected, "var2")}
+                                            // disabled={disabled}
+                                        >
+                                            {selectedKeysReady.map(de => (
+                                                <SingleSelectOption key={de.value} label={de.label} value={de.value}/>
+                                            ))}
+                                        </SingleSelect>
+
+
+                                    </TableCell>
+                                    <TableCell>
+
+                                        <SingleSelect
+                                            filterable
+                                            noMatchText="No operator found"
+                                            placeholder="Select .. "
+                                            selected={selectedOperator}
+                                            value={selectedOperator}
+                                            onChange={({selected}) => handleActionDataElement(selected, "secondaryOperator")}
+                                            // disabled={disabled}
+                                        >
+                                            {operators.map(operator => (
+                                                <SingleSelectOption key={operator.value} label={operator.label}
+                                                                    value={operator.value}/>
+                                            ))}
+                                        </SingleSelect>
 
                                     </TableCell>
                                     <TableCell>
@@ -1432,6 +1602,98 @@ const ConfigureCondition = ({
                                             <input
                                                 type="text"
                                                 value={getLabelByValue(condition.dataElement_two)}
+
+                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
+
+
+                                        </TableCell>
+                                        <TableCell>
+
+                                            <input
+                                                type="text"
+                                                value={condition.action}
+
+                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
+
+                                        </TableCell>
+                                        <TableCell>
+
+                                            <TooltipComponent
+                                                IconType={IconDelete16}
+                                                btnFunc={handleRemoveCondition}
+                                                conditionID={condition.conditionID}
+                                                // conditionID={selectedCondition}
+                                                dynamicText="Remove"
+                                                buttonMode="destructive"
+                                                customIcon={true}
+                                                disabled={false}
+                                            />
+
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+
+
+                            </TableBody>
+                        </Table>
+                    </div>}
+
+                    {selectedOperator === 'is_not_empty' && <div className="p-5">
+                        Existing Actions
+                        <Table
+                            className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+
+                            <TableHead
+                                className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                                <TableRowHead className="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+                                    <TableCellHead>Variable 1</TableCellHead>
+                                    <TableCellHead>Operator 1</TableCellHead>
+                                    <TableCellHead>Variable 2</TableCellHead>
+                                    <TableCellHead>Operator 2</TableCellHead>
+                                    <TableCellHead>Action</TableCellHead>
+                                    <TableCellHead></TableCellHead>
+                                </TableRowHead>
+                            </TableHead>
+                            <TableBody>
+
+                                {configuredCondition?.filter(view => view.dataElement === selectedCondition)?.map(condition =>
+
+                                    <TableRow>
+
+                                        <TableCell>
+
+                                            <input
+                                                type="text"
+                                                value={getLabelByValue(condition.dataElement_one)}
+
+                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
+
+
+                                        </TableCell>
+                                        <TableCell>
+                                            <input
+                                                type="text"
+                                                value={condition.operator}
+
+                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
+
+
+                                        </TableCell>
+                                        <TableCell>
+
+
+                                            <input
+                                                type="text"
+                                                value={getLabelByValue(condition.dataElement_two)}
+
+                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
+
+
+                                        </TableCell>
+                                        <TableCell>
+                                            <input
+                                                type="text"
+                                                value={condition.secondaryOperator}
 
                                                 className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
 
