@@ -488,7 +488,7 @@ const ConfigureCondition = ({
         <div>
             <Modal fluid onClose={handleCloseModal}>
                 <ModalTitle>
-                    Rule Panel
+                    Rule Panel - {getLabelByValue(selectedCondition)}
 
                 </ModalTitle>
                 <ModalContent>

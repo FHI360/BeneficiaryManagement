@@ -11,7 +11,7 @@ import './index.css';
 const MyApp = () => (
     <SetupStateProvider>
         <HashRouter>
-            <div>
+            <div className="flex flex-col min-h-screen">
                 <div className="w-full bg-white">
                     <Routes>
                         <Route
@@ -29,14 +29,13 @@ const MyApp = () => (
                         <Route path="*" element={<Navigate to="/" replace/>}/>
                     </Routes>
                 </div>
-
-                <footer>
+            </div>
+            <footer>
                 <div className="flex flex-col items-center">
                         {customImage('logo')}
                         <p className="mx-auto font-semibold">{footerText}</p>
                     </div>
-                </footer>
-            </div>
+            </footer>
         </HashRouter>
     </SetupStateProvider>
 )
