@@ -2,16 +2,18 @@ import { useAlert, useDataEngine, useDataQuery } from '@dhis2/app-runtime';
 import i18n from '@dhis2/d2-i18n';
 import { Transfer } from '@dhis2/ui';
 import React, { useContext, useEffect, useState } from 'react';
-import { config } from '../consts.js';
+import { config, } from '../consts.js';
 import { SharedStateContext } from '../utils.js';
 import { ConfiguredDataElements } from './ConfiguredDataElements.js';
 import { ConfiguredStagesComponent } from './ConfiguredStagesComponent.js';
 import { DataElementSortComponent } from './DataElementSortComponent.js';
 import { Navigation } from './Navigation.js';
+import NotFoundPage from './NotFoundPage'; // Import a custom 404 component
 import ProgramComponent from './ProgramComponent.js';
 import ProgramStageComponent from './ProgramStageComponent.js';
 
 const ConfigurationComponent = () => {
+
     const {show} = useAlert(
         ({msg}) => msg,
         ({type}) => ({[type]: true})
@@ -23,7 +25,13 @@ const ConfigurationComponent = () => {
         selectedSharedProgram,
         setSelectedSharedProgram,
         selectedSharedOrgUnit,
+        selectedSharedIsAdmin
     } = sharedState;
+
+    if (selectedSharedIsAdmin === false) {
+        // Render the 404 page if the user doesn't have permission
+        return <NotFoundPage />;
+    }
 
     const [keyExists, setKeyExists] = useState({});
     const [selectedProgram, setSelectedProgram] = useState(selectedSharedProgram);
@@ -44,6 +52,7 @@ const ConfigurationComponent = () => {
     const [columnDisplay, setColumnDisplay] = useState(false);
     const [configuredCondition, setSelectedConfiguredCondition] = useState([]);
     const [deleteAction, setDeleteAction] = useState(false)
+
 
     const engine = useDataEngine();
 
@@ -84,11 +93,14 @@ const ConfigurationComponent = () => {
         }
     }
 
+
+
     const {data} = useDataQuery(query, {
         variables: {
             id: selectedProgram
         }
     });
+
 
     const {data: stageData, refetch: refetchStages} = useDataQuery(stageQuery, {
         variables: {

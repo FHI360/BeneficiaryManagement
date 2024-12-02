@@ -3,7 +3,7 @@ import i18n from '@dhis2/d2-i18n';
 import { CalendarInput, Modal, ModalActions, ModalContent, ModalTitle, Pagination } from '@dhis2/ui';
 import classnames from 'classnames';
 import React, { useContext, useEffect, useState } from 'react';
-import { ACTUALIZACAO, ACTUALIZACAO_OPTIONS, config, REFERENCIAS, REFERENCIAS_OPTIONS } from '../../consts.js';
+import { appGroupName, ACTUALIZACAO, ACTUALIZACAO_OPTIONS, config, REFERENCIAS, REFERENCIAS_OPTIONS } from '../../consts.js';
 import {
     formatDate,
     getParticipant,
@@ -34,7 +34,8 @@ export const Main = () => {
         selectedSharedOrgUnit,
         setSelectedSharedOrgUnit,
         selectedSharedStage,
-        setSelectedSharedStage
+        setSelectedSharedStage,
+        setSelectedIsAdmin
     } = sharedState;
 
     const [selectedProgram, setSelectedProgram] = useState(selectedSharedProgram);
@@ -77,6 +78,16 @@ export const Main = () => {
         ({msg}) => msg,
         ({type}) => ({[type]: true})
     )
+
+    const profileQuery = {
+        me: {
+            resource: 'me',
+            params: {
+                fields: 'userGroups(name)',
+                paging: 'false'
+            },
+        },
+    }
 
     const dataStoreQuery = {
         dataStore: {
@@ -133,6 +144,20 @@ export const Main = () => {
         data: attributesData,
         refetch: attributesRefetch
     } = useDataQuery(attributesQuery, {variables: {program: selectedProgram}});
+    
+    const {data: profileDate} = useDataQuery(profileQuery);
+    useEffect(() => {
+        if(profileDate?.me?.userGroups){
+            const userGroupsMemberships = profileDate.me.userGroups
+            if (userGroupsMemberships.length > 0){
+                const admin = userGroupsMemberships.some(member => appGroupName == member.name)
+                setSelectedIsAdmin(admin)
+                console.log("isAdmin: ", admin)
+            }
+
+        }
+    
+    }, [profileDate]);
 
     useEffect(() => {
         if (dataStore?.dataStore?.entries) {

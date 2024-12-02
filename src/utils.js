@@ -3,6 +3,7 @@ import classes from './App.module.css'
 import refresh from './icons/refresh.png'
 import search from './icons/search.png'
 import logo from './icons/logo.png'
+import padlock from './icons/padlock_resized.jpg';
 
 
 export const customImage = (source, size = 'small') => {
@@ -18,6 +19,13 @@ export const customImage = (source, size = 'small') => {
     }
     if (source.toLowerCase() === 'logo') {
         return <img src={logo} className={classes.logo_half_size}/>
+    }
+    if (source.toLowerCase() === '404') {
+        return <img 
+                src={padlock} 
+                alt="Access Denied" 
+                className="w-24 h-24 mb-6" // Adjust size as needed
+        />
     }
 
 }
@@ -339,6 +347,9 @@ export const SharedStateContext = createContext({
     },
     selectedSharedStage: '',
     setSelectedSharedStage: () => {
+    },
+    selectedSharedIsAdmin: '',
+    setSelectedIsAdmin: () => {
     }
 })
 
@@ -347,6 +358,7 @@ export const useSharedState = () => {
     const [selectedSharedProgram, setSelectedSharedProgram_] = useState('');
     const [selectedSharedOrgUnit, setSelectedSharedOrgUnit_] = useState('');
     const [selectedSharedStage, setSelectedSharedStage_] = useState('');
+    const [selectedSharedIsAdmin, setSelectedIsAdmin_] = useState(false);
 
 
     // memoizedCallbacks
@@ -368,6 +380,9 @@ export const useSharedState = () => {
     const setSelectedSharedStage = useCallback((data) => {
         setSelectedSharedStage_(data)
     }, []);
+    const setSelectedIsAdmin = useCallback((data) => {
+        setSelectedIsAdmin_(data)
+    }, []);
 
 
     return {
@@ -378,7 +393,9 @@ export const useSharedState = () => {
         selectedSharedOrgUnit,
         setSelectedSharedOrgUnit,
         selectedSharedStage,
-        setSelectedSharedStage
+        setSelectedSharedStage,
+        selectedSharedIsAdmin,
+        setSelectedIsAdmin
     }
 }
 

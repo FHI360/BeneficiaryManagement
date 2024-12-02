@@ -25,6 +25,7 @@ const version = 'Production Version v1.0.1 | Beta 11-20-2024'
 export const footerText = `Copyright © FHI360 | USAID FILOVC PPA | Business Solutions | 2024 | ${version}`
 export const project_description = 'This application resolves duplicate issues'
 export const panelAction = 'Finding duplicate tracked entities'
+export const appGroupName = "USAID FILOVC PPA APP ADMIN"
 
 export const REFERENCIAS = 'ItVYsNfJZEX';
 export const ACTUALIZACAO = 'xZVwawMNs1d';
