@@ -1,7 +1,7 @@
 import { useAlert } from '@dhis2/app-runtime'
 import { Transfer } from '@dhis2/ui';
 import { SingleSelect, SingleSelectOption } from '@dhis2-ui/select'
-import {  IconDelete16} from '@dhis2/ui-icons'; 
+import {  IconDelete16} from '@dhis2/ui-icons';
 import TooltipComponent from './TooltipComponent.js';
 import { generateRandomId } from '../utils.js';
 import {
@@ -47,17 +47,17 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
     useEffect(()=>{
             // If condition doesn't exist, create new and add to array
             console.log('condition_: ', condition_)
-            
+
             if (conditionExists_ === true) {
                 setSelectedConfiguredCondition(prevSelected => [...prevSelected, condition_])
                 setSaveCondition(false)
                 console.log("Condition Created");
 
                     show({ msg: `Condition Created Successfully.`, type: 'success' })
-                
-                
 
-    
+
+
+
             }
 
     },[triggerSaving_])
@@ -66,25 +66,25 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
         if(saveCondition){
             console.log('saveCondition: ', saveCondition)
             if (selectedOperator === 'between'){
-                if (selectedVariable1.length > 0 && 
-                    selectedVariable2.length > 0 && 
-                    selectedAction.length > 0 && 
-                    value_text.length > 0 && 
+                if (selectedVariable1.length > 0 &&
+                    selectedVariable2.length > 0 &&
+                    selectedAction.length > 0 &&
+                    value_text.length > 0 &&
                     selectedOperator.length > 0 )
                         {
-                            const condition = 
-                                {   
+                            const condition =
+                                {
                                     "selectedStage":selectedStage || '',
                                     "dataElement":selectedCondition,
                                     "conditionID":selectedCondition+"_"+generateRandomId(),
-                                    "dataElement_one": selectedVariable1, 
-                                    "dataElement_two": selectedVariable2, 
-                                    "operator": selectedOperator,            
+                                    "dataElement_one": selectedVariable1,
+                                    "dataElement_two": selectedVariable2,
+                                    "operator": selectedOperator,
                                     "value_text": value_text,
                                     "action": selectedAction
                                 }
                                 setCondition(condition)
-                            
+
                                     // Check if an identical condition exists in the array
                                 const conditionExists = configuredCondition.find(condition =>
                                     condition.dataElement === selectedCondition &&
@@ -96,12 +96,12 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                 );
                                 if(conditionExists === false) {
                                     show({ msg: `An identical condition already exists:`, type: 'warning' })
-                                    
+
                                 }
                                 setConditionExists(!conditionExists)
                                 console.log(conditionExists)
-                                setTriggerSaving_(prev => !prev)    
-                                
+                                setTriggerSaving_(prev => !prev)
+
                         }
                 else{
                     console.log("No missing field is allowed")
@@ -109,27 +109,27 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                 }
             }
             if (selectedOperator === 'equals'){
-                if (selectedVariable1.length > 0 && 
-                    selectedVariable2.length > 0 && 
-                    selectedAction.length > 0 && 
-                    value_text.length > 0 && 
+                if (selectedVariable1.length > 0 &&
+                    selectedVariable2.length > 0 &&
+                    selectedAction.length > 0 &&
+                    value_text.length > 0 &&
                     selectedOperator.length > 0 &&
                     equals_value_text.length > 0 )
                         {
-                            const condition = 
-                                {   
+                            const condition =
+                                {
                                     "selectedStage":selectedStage || '',
                                     "dataElement":selectedCondition,
                                     "conditionID":selectedCondition+"_"+generateRandomId(),
-                                    "dataElement_one": selectedVariable1, 
-                                    "dataElement_two": selectedVariable2, 
-                                    "operator": selectedOperator,            
+                                    "dataElement_one": selectedVariable1,
+                                    "dataElement_two": selectedVariable2,
+                                    "operator": selectedOperator,
                                     "value_text": value_text,
                                     "equals_to":equals_value_text,
                                     "action": selectedAction
                                 }
                                 setCondition(condition)
-                            
+
                                     // Check if an identical condition exists in the array
                                 const conditionExists = configuredCondition.find(condition =>
                                     condition.dataElement === selectedCondition &&
@@ -142,12 +142,12 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                 );
                                 if(conditionExists === false) {
                                     show({ msg: `An identical condition already exists:`, type: 'warning' })
-                                    
+
                                 }
                                 setConditionExists(!conditionExists)
-                                console.log(conditionExists) 
-                                setTriggerSaving_(prev => !prev)   
-                                
+                                console.log(conditionExists)
+                                setTriggerSaving_(prev => !prev)
+
                         }
                 else{
                     show({ msg: `No missing field is allowed`, type: 'warning' })
@@ -209,7 +209,7 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
 
     useEffect(() => {
         // const de_ = dataElements?.filter(selectedDataElement=>selectedDataElement.id !== selectedCondition) || []
-        
+
         // const mapped_de_ = de_?.map(dataElement => {
         //     return {
         //         label: dataElement.name,
@@ -230,7 +230,7 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
 
 
 
-    
+
 
 
     // Function to hide field
@@ -252,7 +252,7 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
     };
 
     const handleCloseModal = () => {
-        setShowConditionsModal(false);            
+        setShowConditionsModal(false);
     };
 
     const handleTransferAction = (selected) => {
@@ -269,7 +269,7 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
         const filteredDataElements = dataElements_.filter(element =>
             selected.includes(element.value)
         );
-        
+
         if (filteredDataElements.length < 3){
             setSelectedKeys(selected)
             console.log(filteredDataElements.length);
@@ -277,7 +277,7 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
         }else{
             console.log("Only 2 Options Can be Selected")
         }
-        
+
         console.log(selectedKeysReady);
 
     };
@@ -293,10 +293,10 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
     const handleActionDataElement = (selected, variable) => {
 
         if (variable === 'var1'){
-            setSelectedVariable1(selected); 
+            setSelectedVariable1(selected);
         }
         if (variable === 'var2'){
-            setSelectedVariable2(selected); 
+            setSelectedVariable2(selected);
         }
         if(variable == 'operator'){
             if (selected === 'greater_than'){
@@ -311,16 +311,16 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
             if (selected === 'between'){
                 console.log("Not implemented")
             }
-            
+
             setSelectedOperator(selected)
         }
         if(variable == 'action'){
             setSelectedAction(selected)
         }
-        
-      
+
+
     };
-    
+
     // Function to get label from value
     const getLabelByValue = (value) => {
         const element = dataElements_.find(el => el.value === value);
@@ -344,7 +344,7 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                     leftHeader={<div className="p-2 font-semibold">Data Elements</div>}
 
                     rightHeader={<div className="p-2 font-semibold">Selected Data Elements(s)</div>}
-                    // loading={loading}        
+                    // loading={loading}
                     enableOrderChange
                     options={dataElements_}
                     selected={selectedKeys}
@@ -361,7 +361,7 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                                 filterable
                                                                 noMatchText="No operator found"
                                                                 placeholder="Select .. "
-                                                                selected={selectedOperator} 
+                                                                selected={selectedOperator}
                                                                 value={selectedOperator}
                                                                 onChange={({ selected }) => handleActionDataElement(selected, "operator")}
                                                                 // disabled={disabled}
@@ -369,13 +369,13 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                                 {operators.map(operator => (
                                                                 <SingleSelectOption key={operator.value} label={operator.label} value={operator.value} />
                                                                 ))}
-                
+
                                                            </SingleSelect>
                 {selectedOperator === 'between' && <Table
-                className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                className="w-full text-sm text-left rtl:text-right text-gray-500 ">
 
-                <TableHead className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                    <TableRowHead className="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+                <TableHead className="w-full text-sm text-left rtl:text-right text-gray-500 ">
+                    <TableRowHead className="mt-1 text-sm font-normal text-gray-500 ">
                         <TableCellHead>Variable 1</TableCellHead>
                         <TableCellHead>Operator</TableCellHead>
                         <TableCellHead>Variable 2</TableCellHead>
@@ -385,8 +385,8 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                 </TableHead>
                 <TableBody>
 
-                
-                                                        
+
+
                                                         <TableRow>
                                                             <TableCell>
 
@@ -411,7 +411,7 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                                 filterable
                                                                 noMatchText="No operator found"
                                                                 placeholder="Select .. "
-                                                                selected={selectedOperator} 
+                                                                selected={selectedOperator}
                                                                 value={selectedOperator}
                                                                 onChange={({ selected }) => handleActionDataElement(selected, "operator")}
                                                                 // disabled={disabled}
@@ -424,7 +424,7 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
 
                                                             </TableCell>
                                                             <TableCell>
-                                                                
+
 
 
                                                             <SingleSelect
@@ -449,12 +449,12 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                                 type="text"
                                                                 value={value_text}
                                                                 onChange={(event) => set_value_text(event.target.value)}
-                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
-                                                                
+                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"/>
+
                                                             </TableCell>
                                                             <TableCell>
 
-                                                            
+
                                                             <SingleSelect
                                                                 filterable
                                                                 noMatchText="No data element found"
@@ -469,19 +469,19 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                                 ))}
                                                             </SingleSelect>
                                                             </TableCell>
-                                                            
-                                                        </TableRow>
-                                                            
-         
-                </TableBody>
-                </Table>} 
-                
-                {selectedOperator === 'equals' && 
-                <Table
-                                                        className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
 
-                                                        <TableHead className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                                                            <TableRowHead className="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+                                                        </TableRow>
+
+
+                </TableBody>
+                </Table>}
+
+                {selectedOperator === 'equals' &&
+                <Table
+                                                        className="w-full text-sm text-left rtl:text-right text-gray-500 ">
+
+                                                        <TableHead className="w-full text-sm text-left rtl:text-right text-gray-500 ">
+                                                            <TableRowHead className="mt-1 text-sm font-normal text-gray-500 ">
                                                                 <TableCellHead>Variable 1</TableCellHead>
                                                                 <TableCellHead>Operator</TableCellHead>
                                                                 <TableCellHead>Equal to Value</TableCellHead>
@@ -492,8 +492,8 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                         </TableHead>
                                                         <TableBody>
 
-                
-                                                        
+
+
                                                         <TableRow>
                                                             <TableCell>
 
@@ -518,7 +518,7 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                                 filterable
                                                                 noMatchText="No operator found"
                                                                 placeholder="Select .. "
-                                                                selected={selectedOperator} 
+                                                                selected={selectedOperator}
                                                                 value={selectedOperator}
                                                                 onChange={({ selected }) => handleActionDataElement(selected, "operator")}
                                                                 // disabled={disabled}
@@ -537,13 +537,13 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                                     type="text"
                                                                     value={equals_value_text}
                                                                     onChange={(event) => set_equals_value_text(event.target.value)}
-                                                                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
-                                                                    
+                                                                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "/>
+
                                                             </TableCell>
-                                                            
+
                                                             <TableCell>
 
-                                                            
+
                                                                 <SingleSelect
                                                                     filterable
                                                                     noMatchText="No data element found"
@@ -557,15 +557,15 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                                     <SingleSelectOption key={action.value} label={action.label} value={action.value} />
                                                                     ))}
                                                                 </SingleSelect>
-                                                            </TableCell>                             
+                                                            </TableCell>
                                                             <TableCell>
 
                                                             <input
                                                                 type="text"
                                                                 value={value_text}
                                                                 onChange={(event) => set_value_text(event.target.value)}
-                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
-                                                                
+                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "/>
+
                                                             </TableCell>
                                                             <TableCell>
                                                                 <SingleSelect
@@ -586,21 +586,21 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                             </TableCell>
 
 
-                                                            
+
                                                         </TableRow>
-                                                            
-         
+
+
                 </TableBody>
-                </Table>} 
+                </Table>}
                 </div>
-                
+
                 {selectedOperator === 'between' &&  <div className="p-5">
                 Existing Actions
                 <Table
-                className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                className="w-full text-sm text-left rtl:text-right text-gray-500 ">
 
-                <TableHead className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                    <TableRowHead className="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+                <TableHead className="w-full text-sm text-left rtl:text-right text-gray-500 ">
+                    <TableRowHead className="mt-1 text-sm font-normal text-gray-500 ">
                         <TableCellHead>Variable 1</TableCellHead>
                         <TableCellHead>Operator</TableCellHead>
                         <TableCellHead>Variable 2</TableCellHead>
@@ -611,39 +611,39 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                 </TableHead>
                 <TableBody>
 
-                {configuredCondition?.filter(view=>view.dataElement === selectedCondition)?.map(condition => 
-                                                        
+                {configuredCondition?.filter(view=>view.dataElement === selectedCondition)?.map(condition =>
+
                                                         <TableRow>
-                                                            
+
                                                             <TableCell>
 
                                                             <input
                                                                 type="text"
                                                                 value={getLabelByValue(condition.dataElement_one)}
-                                                            
-                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
-                                                                
+
+                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "/>
+
 
                                                             </TableCell>
                                                             <TableCell>
                                                             <input
                                                                 type="text"
                                                                 value={condition.operator}
-                                                    
-                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
-                                                                
+
+                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "/>
+
 
 
                                                             </TableCell>
                                                             <TableCell>
-                                                                
+
 
                                                             <input
                                                                 type="text"
                                                                 value={getLabelByValue(condition.dataElement_two)}
-                                             
-                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
-                                                                
+
+                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "/>
+
 
 
                                                             </TableCell>
@@ -652,9 +652,9 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                             <input
                                                                 type="text"
                                                                 value={condition.value_text}
-                                      
-                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
-                                                                
+
+                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "/>
+
                                                             </TableCell>
                                                             <TableCell>
 
@@ -662,13 +662,13 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                                 type="text"
                                                                 value={condition.action}
 
-                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
-                                                                
+                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "/>
+
                                                             </TableCell>
                                                             <TableCell>
 
-                                                            <TooltipComponent 
-                                                                                    IconType={IconDelete16} 
+                                                            <TooltipComponent
+                                                                                    IconType={IconDelete16}
                                                                                     btnFunc={handleRemoveCondition}
                                                                                     conditionID={condition.conditionID}
                                                                                     // conditionID={selectedCondition}
@@ -681,18 +681,18 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                             </TableCell>
                                                         </TableRow>
                                                         )}
-                                                            
-         
+
+
                 </TableBody>
                 </Table>
                 </div>}
 
                 {selectedOperator === 'equals' && <div className='p-5'>
                     <Table
-                                                        className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                                                        className="w-full text-sm text-left rtl:text-right text-gray-500 ">
 
-                                                        <TableHead className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                                                            <TableRowHead className="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+                                                        <TableHead className="w-full text-sm text-left rtl:text-right text-gray-500 ">
+                                                            <TableRowHead className="mt-1 text-sm font-normal text-gray-500 ">
                                                                 <TableCellHead>Variable 1</TableCellHead>
                                                                 <TableCellHead>Operator</TableCellHead>
                                                                 <TableCellHead>Equal to Value</TableCellHead>
@@ -704,15 +704,15 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                         </TableHead>
                                                         <TableBody>
 
-                
-                                                        {configuredCondition?.filter(view=>view.dataElement === selectedCondition)?.map(condition =>                                            
+
+                                                        {configuredCondition?.filter(view=>view.dataElement === selectedCondition)?.map(condition =>
                                                         <TableRow>
                                                             <TableCell>
                                                             <input
                                                                 type="text"
                                                                 value={getLabelByValue(condition.dataElement_one)}
-                                                            
-                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
+
+                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "/>
 
                                                             </TableCell>
                                                             <TableCell>
@@ -720,8 +720,8 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                             <input
                                                                 type="text"
                                                                 value={getLabelByValue(condition.operator)}
-                                                            
-                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
+
+                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "/>
 
 
                                                             </TableCell>
@@ -731,35 +731,35 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                             <input
                                                                 type="text"
                                                                 value={getLabelByValue(condition.equals_to)}
-                                                            
-                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
+
+                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "/>
                                                             </TableCell>
-                                                            
+
                                                             <TableCell>
 
-                                                            
+
                                                             <input
                                                                 type="text"
                                                                 value={getLabelByValue(condition.action)}
-                                                            
-                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
+
+                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "/>
 
 
-                                                            </TableCell>                             
+                                                            </TableCell>
                                                             <TableCell>
                                                             <input
                                                                 type="text"
                                                                 value={getLabelByValue(condition.value_text)}
-                                                            
-                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
+
+                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "/>
 
                                                             </TableCell>
                                                             <TableCell>
                                                             <input
                                                                 type="text"
                                                                 value={getLabelByValue(condition.dataElement_two)}
-                                                            
-                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
+
+                                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "/>
 
 
 
@@ -767,8 +767,8 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
 
                                                             <TableCell>
 
-                                                                <TooltipComponent 
-                                                                                        IconType={IconDelete16} 
+                                                                <TooltipComponent
+                                                                                        IconType={IconDelete16}
                                                                                         btnFunc={handleRemoveCondition}
                                                                                         conditionID={condition.conditionID}
                                                                                         // conditionID={selectedCondition}
@@ -779,21 +779,21 @@ const ConfigureCondition = ({dataElements, selectedCondition, configuredConditio
                                                                                         />
 
                                                             </TableCell>
-                                                            
+
                                                         </TableRow>
                                                         )}
-                                                            
-         
+
+
                 </TableBody>
                 </Table>
-                    
+
                     </div>}
                 </ModalContent>
                 <ModalActions>
                     <ButtonStrip>
                         <Button onClick={() => handleCloseModal()}>Close</Button>
                         <Button primary  onClick={() => createCondition()}
-                            
+
                         disabled={selectedCondition === ''}>
                             Create Condition
                         </Button>

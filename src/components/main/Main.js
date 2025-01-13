@@ -119,7 +119,7 @@ export const Main = () => {
     const entitiesQuery = {
         entities: {
             resource: 'tracker/trackedEntities',
-            params: ({orgUnit, program, page, pageSize}) => {
+            params: ({orgUnit, program, page, pageSize, filter}) => {
                 return ({
                     program: program,
                     orgUnit: orgUnit,
@@ -128,6 +128,7 @@ export const Main = () => {
                     paging: true,
                     totalPages: true,
                     fields: ['*'],
+                    filter
                 })
             }
         }
@@ -195,6 +196,10 @@ export const Main = () => {
     }, [elementsData, selectedStage, toggle]);
 
     useEffect(() => {
+        const filter = Object.keys(filterValue).filter(key => filterValue[key]).map(key => {
+            return `${key}:EQ:${filterValue[key]}`
+        }).join('&filter=');
+
         if (orgUnit && selectedProgram) {
             setLoading(true);
             engine.query(entitiesQuery, {
@@ -202,7 +207,8 @@ export const Main = () => {
                     program: selectedProgram,
                     orgUnit: orgUnit,
                     page,
-                    pageSize
+                    pageSize,
+                    filter
                 }
             }).then(res => {
                 if (res && res.entities) {
@@ -210,18 +216,7 @@ export const Main = () => {
                     setAllEntities(entities);
                     setTotal(res.entities.total);
 
-                    if (filterValue && Object.keys(filterValue).length) {
-                        Object.keys(filterValue).forEach(key => {
-                            const filteredEntities = entities.filter(entity => {
-                                const attribute = entity.attributes.find(attr => attr.attribute === key);
-                                return attribute && attribute.value + '' === filterValue[key] + '';
-                            });
-
-                            setEntities(filteredEntities);
-                        })
-                    } else {
-                        setEntities(entities);
-                    }
+                    setEntities(entities);
                     setLoading(false);
                 } else {
                     setEntities([]);
@@ -305,16 +300,8 @@ export const Main = () => {
         filterAttributes[filterAttr] = value;
         setFilterValue(filterAttributes);
 
-        if (value && (value + '').length > 0) {
-            const entities = allEntities.filter(entity => {
-                const attribute = entity.attributes.find(attr => attr.attribute === filterAttr);
-                return attribute && attribute.value + '' === value + '';
-            });
-
-            setEntities(entities);
-        } else {
-            setEntities(allEntities)
-        }
+        setPage(1);
+        setToggle((prev) => !prev)
     }
 
     const calculateDatesBetween = (startDate, endDate) => {
@@ -736,7 +723,7 @@ export const Main = () => {
                                                     {Object.keys(filterAttributes).length > 0 &&
                                                         <div className="card p-3 mb-2 w-full gap-x-1">
                                                             <label htmlFor="stage"
-                                                                   className="block mb-2 text-sm font-medium text-gray-900 dark:text-white border-b-2 border-b-gray-800">
+                                                                   className="block mb-2 text-sm font-medium text-gray-900  border-b-2 border-b-gray-800">
                                                                 {i18n.t('Entity Filter')}
                                                             </label>
                                                             <div className="p-2 flex flex-row flex-wrap">
@@ -763,7 +750,7 @@ export const Main = () => {
                                                                 className="w-full card p-3 flex flex-row gap-x-1">
                                                                 <div className="w-3/12 flex flex-col">
                                                                     <label
-                                                                        className="text-left block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                                                                        className="text-left block mb-2 text-sm font-medium text-gray-900 ">
                                                                         {((endDateVisible && repeatable)) ? 'Event Start Date' : 'Event Date'}
                                                                     </label>
                                                                     <CalendarInput
@@ -776,7 +763,7 @@ export const Main = () => {
                                                                 {((endDateVisible && repeatable)) &&
                                                                     <div className="w-3/12 flex flex-col">
                                                                         <label
-                                                                            className="text-left block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                                                                            className="text-left block mb-2 text-sm font-medium text-gray-900 ">
                                                                             {'Event End Date'}
                                                                         </label>
                                                                         <CalendarInput
@@ -815,11 +802,11 @@ export const Main = () => {
                                                                         {configuredStages[selectedStage] && Object.keys(configuredStages[selectedStage]['templates'] || {}).length > 0 &&
                                                                             <div className="w-3/12">
                                                                                 <label htmlFor="stage"
-                                                                                       className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                                                                                       className="block mb-2 text-sm font-medium text-gray-900 ">
                                                                                     {i18n.t('Select Saved Event')}
                                                                                 </label>
                                                                                 <select id="stage"
-                                                                                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                                                                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "
                                                                                         value={selectedTemplate}
                                                                                         onChange={(event) => handleTemplateChange(event.target.value)}>
                                                                                     <option selected>Choose event
@@ -856,7 +843,7 @@ export const Main = () => {
                                                                                 })}
                                                                                 {selectedStage === REFERENCIAS &&
                                                                                     <table
-                                                                                        className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                                                                                        className="w-full text-sm text-left rtl:text-right text-gray-500 ">
                                                                                         <thead>
                                                                                         <tr className="border">
                                                                                             <th colSpan={6}
@@ -892,7 +879,7 @@ export const Main = () => {
                                                                                 {selectedStage === ACTUALIZACAO &&
                                                                                     <table className="">
                                                                                         <thead
-                                                                                            className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                                                                            className="text-xs text-gray-700 uppercase bg-gray-50 ">
                                                                                         <tr>
                                                                                             <th colSpan={ACTUALIZACAO_OPTIONS.current.length}
                                                                                                 className="text-center p-4">
@@ -988,16 +975,16 @@ export const Main = () => {
                                                                             </div>
 
                                                                             <table
-                                                                                className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                                                                                className="w-full text-sm text-left rtl:text-right text-gray-500 d">
                                                                                 <caption
-                                                                                    className="p-5 text-lg font-semibold text-left rtl:text-right text-gray-900 bg-white dark:text-white dark:bg-gray-800">
+                                                                                    className="p-5 text-lg font-semibold text-left rtl:text-right text-gray-900 bg-white">
 
-                                                                                    <p className="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+                                                                                    <p className="mt-1 text-sm font-normal text-gray-500 d">
 
                                                                                     </p>
                                                                                 </caption>
                                                                                 <thead
-                                                                                    className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                                                                    className="text-xs text-gray-700 uppercase bg-gray-50">
                                                                                 <tr className="border">
                                                                                     {groupEdit &&
                                                                                         <th className="px-6 py-6 w-1/12">
@@ -1130,7 +1117,7 @@ export const Main = () => {
                                                                                             }
                                                                                             <td rowSpan={!groupEdit && selectedStage === REFERENCIAS ? referenciasRows() : 1}>{index + 1}</td>
                                                                                             <td rowSpan={!groupEdit && selectedStage === REFERENCIAS ? referenciasRows() : 1}
-                                                                                                className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{getParticipant(entity, nameAttributes)}</td>
+                                                                                                className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap ">{getParticipant(entity, nameAttributes)}</td>
                                                                                             {!groupEdit && [REFERENCIAS, ACTUALIZACAO].includes(selectedStage) &&
                                                                                                 <>
                                                                                                     {selectedStage === REFERENCIAS &&
@@ -1277,20 +1264,20 @@ export const Main = () => {
                     <div
                         className="w-full mb-2">
                         <label
-                            className="text-left block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                            className="text-left block mb-2 text-sm font-medium text-gray-900 ">
                             Event Name
                         </label>
                         <input
                             type="text"
                             value={templateName}
                             onChange={(event) => setTemplateName(event.target.value)}
-                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"/>
+                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 "/>
                     </div>
                 </ModalContent>
 
                 <ModalActions>
                     <button type="button"
-                            className="py-2.5 px-5 me-2 mb-2 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+                            className="py-2.5 px-5 me-2 mb-2 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 "
                             onClick={() => {
                                 setModalShow(false);
                             }}>
@@ -1299,8 +1286,8 @@ export const Main = () => {
 
                     <button type="button"
                             className={classnames(
-                                {'text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800': !!templateName},
-                                {'text-white bg-blue-400 dark:bg-blue-500 cursor-not-allowed font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 text-center': !templateName}
+                                {'text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2  focus:outline-none ': !!templateName},
+                                {'text-white bg-blue-400 cursor-not-allowed font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 text-center': !templateName}
                             )}
                             disabled={!templateName}
                             onClick={() => {
@@ -1320,7 +1307,7 @@ export const Main = () => {
 
                 <ModalActions>
                     <button type="button"
-                            className="py-2.5 px-5 me-2 mb-2 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+                            className="py-2.5 px-5 me-2 mb-2 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 "
                             onClick={() => {
                                 setConfirmShow(false);
                             }}>
@@ -1328,7 +1315,7 @@ export const Main = () => {
                     </button>
 
                     <button type="button"
-                            className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+                            className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2  focus:outline-none "
                             onClick={() => {
                                 setConfirmShow(false);
                                 setPage(1);

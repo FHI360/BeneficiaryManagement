@@ -11,16 +11,16 @@ export const DataElementSortComponent=({stages, selectedStage, checkDataElements
                 <div
                     className="relative overflow-x-auto shadow-md sm:rounded-lg">
                     <table
-                        className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                        className="w-full text-sm text-left rtl:text-right text-gray-500">
                         <caption
-                            className="p-5 text-lg font-semibold text-left rtl:text-right text-gray-900 bg-white dark:text-white dark:bg-gray-800">
+                            className="p-5 text-lg font-semibold text-left rtl:text-right text-gray-900 bg-white">
                             {stages.find(stage => stage.id === selectedStage)?.displayName}
-                            <p className="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+                            <p className="mt-1 text-sm font-normal text-gray-500">
                                 {i18n.t('Click the up or down arrow to sort the ordering of the data elements during display')}
                             </p>
                         </caption>
                         <thead
-                            className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                            className="text-xs text-gray-700 uppercase bg-gray-50">
                         <tr>
                             <th data-priority="1" className="px-6 py-3 w-1/12">#</th>
                             <th data-priority="2" className="px-6 py-3 w-9/12 text-left">
@@ -34,7 +34,7 @@ export const DataElementSortComponent=({stages, selectedStage, checkDataElements
                             return <>
                                 <tr>
                                     <td>{index + 1}</td>
-                                    <td className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{dataElements.find(de => de.id === dataElement)?.name}</td>
+                                    <td className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{dataElements.find(de => de.id === dataElement)?.name}</td>
                                     <td>
                                         <div className="flex flex-row">
                                             {index < ((checkDataElements || []).length - 1) &&
@@ -59,7 +59,7 @@ export const DataElementSortComponent=({stages, selectedStage, checkDataElements
                         })}
                         </tbody>
                         <tfoot>
-                        <tr className="font-semibold text-gray-900 dark:text-white">
+                        <tr className="font-semibold text-gray-900">
                             <th colSpan={2} className="px-6 py-3 text-base">
                                 <button type="button"
                                         className="primary-btn"

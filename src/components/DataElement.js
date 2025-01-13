@@ -202,7 +202,11 @@ export const DataElementComponent = ({
                                     onChange={(event) => {
                                         setEdit(false);
 
-                                        updateValue(event.target.value);
+                                        let value = event.target.value;
+                                        if (value === 'Select one') {
+                                            value = undefined;
+                                        }
+                                        updateValue(value);
                                     }}>
                                 <option defaultValue={''}>Select one</option>
                                 {options.filter(option => !!option).map(option => (

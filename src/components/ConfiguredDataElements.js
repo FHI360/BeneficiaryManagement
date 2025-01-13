@@ -34,16 +34,16 @@ export const ConfiguredDataElements = ({
                 <div
                     className="relative overflow-x-auto shadow-md sm:rounded-lg">
                     <table
-                        className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                        className="w-full text-sm text-left rtl:text-right text-gray-500 ">
                         <caption
-                            className="p-5 text-lg font-semibold text-left rtl:text-right text-gray-900 bg-white dark:text-white dark:bg-gray-800">
+                            className="p-5 text-lg font-semibold text-left rtl:text-right text-gray-900 bg-white ">
                             {stages.find(stage => stage.id === selectedStage)?.displayName}
-                            <p className="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+                            <p className="mt-1 text-sm font-normal text-gray-500 ">
                                 {caption}
                             </p>
                         </caption>
                         <thead
-                            className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                            className="text-xs text-gray-700 uppercase bg-gray-50 ">
                         <tr>
                             <th className="px-6 py-6 w-1/12">
                                 <div
@@ -81,7 +81,7 @@ export const ConfiguredDataElements = ({
                                         </div>
                                     </td>
                                     <td>{index + 1}</td>
-                                    <td className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{dataElement.name}
+                                    <td className="text-left px-6 py-4 font-medium text-gray-900 whitespace-nowrap ">{dataElement.name}
                                         <TooltipComponent
                                             IconType={IconView24}
                                             btnFunc={handleConfigureCondition}
@@ -98,7 +98,7 @@ export const ConfiguredDataElements = ({
                         })}
                         </tbody>
                         <tfoot>
-                        <tr className="font-semibold text-gray-900 dark:text-white">
+                        <tr className="font-semibold text-gray-900 ">
                             <th colSpan={3} className="px-6 py-3 text-base">
                                 <button type="button"
                                         className="default-btn py-1"
