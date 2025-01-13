@@ -144,7 +144,7 @@ export const Main = () => {
         data: attributesData,
         refetch: attributesRefetch
     } = useDataQuery(attributesQuery, {variables: {program: selectedProgram}});
-    
+
     const {data: profileDate} = useDataQuery(profileQuery);
     useEffect(() => {
         if(profileDate?.me?.userGroups){
@@ -156,7 +156,7 @@ export const Main = () => {
             }
 
         }
-    
+
     }, [profileDate]);
 
     useEffect(() => {
@@ -680,7 +680,7 @@ export const Main = () => {
                                 <div className="w-full flex flex-row pt-2 gap-x-1">
                                     <div
                                         className={orgUnit ? 'w-3/12 flex flex-row card' : 'flex flex-row card w-full'}>
-                                        <div className="w-3/12 p-3">
+                                        <div className="p-3">
                                             <label htmlFor="stage"
                                                    className="label">
                                                 {i18n.t('Event Venue')}
